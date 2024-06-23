@@ -26,7 +26,6 @@ class Circuit:
             A dictionary that contains the circuit's elements at each branch
             of the circuit.
 
-
     """
 
     elements: list[Edge]
@@ -45,7 +44,11 @@ class Circuit:
         self.node_dict = node_dictionary
         self.no_nodes = len(node_dictionary)
 
-        self.K = self.Kirchhoff()
+        self.Fcut, self.Floop, self.F, self.K = self.Kirchhoff()
+
+        self.omega_2B, self.omega_alpha_beta = self.omega_function()
+        
+
 
     def Kirchhoff(self):
 
@@ -70,6 +73,7 @@ class Circuit:
         A = Fcut[:, n:]
         Floop = np.hstack((-A.T, np.eye(A.shape[1])))
 
+        # F = [[Fcut, 0], [0, Floop]] = Kirchhoff matrix
         F = np.bmat(
             [
                 [Fcut, np.zeros((Fcut.shape[0], Floop.shape[1]))],
@@ -77,28 +81,53 @@ class Circuit:
             ]
         )
 
-        return F
+        # K = [[Floop.T, 0], [0, Fcut.T]] = Kernel matrix
+        K = np.bmat(
+            [
+                [Floop.T, np.zeros((Floop.shape[1], Fcut.shape[0]))],
+                [np.zeros((Fcut.shape[1], Floop.shape[0])), Fcut.T],
+            ]
+        )
 
+        return Fcut, Floop, F, K
+    
+    def omega_function(self):
+        
+        # Obtain omega_2B matrix
+        omega_2B = np.zeros((2*self.no_elements,2*self.no_elements)) 
+        for ii in range(2*self.no_elements):
+            for jj in range(2*self.no_elements):
+                if jj == ii + self.no_elements:
+                    if isinstance(self.elements[ii][2], Capacitor) == True:
+                        omega_2B[ii,jj] = 0.5
+                    if isinstance(self.elements[ii][2], Inductor) == True:
+                        omega_2B[ii,jj] = -0.5
+                if ii == jj + self.no_elements:
+                    if isinstance(self.elements[jj][2], Capacitor) == True:
+                        omega_2B[ii,jj] = -0.5
+                    if isinstance(self.elements[jj][2], Inductor) == True:
+                        omega_2B[ii,jj] = 0.5
+                    
+        # Obtain omega_alpha_beta matrix
+        omega_alpha_beta = self.K.T @ omega_2B @ self.K
 
+        return omega_2B, omega_alpha_beta
+        
+        
 def GaussJordan(M):
     # Obtain the matrix dimensions
-    nrows, ncolumns = M.shape
-    assert nrows <= ncolumns
+    no_rows, no_columns = M.shape
+    assert no_rows <= no_columns
     M = M.copy()
-    print(f"M before Gauss Jordan:\n{M}")
-    order = np.arange(ncolumns)
-    for ii in range(nrows):
-        print(f"Eliminating with respect to row {ii}")
-        print(np.abs(M[ii, ii:]))
+    order = np.arange(no_columns)
+    for ii in range(no_rows):
         k = np.argmax(np.abs(M[ii, ii:]))
         if k != 0:
-            print(f"Swapping columns {ii} and {ii+k}")
             M[:, ii], M[:, ii + k] = M[:, ii + k], M[:, ii]
             order[ii], order[ii + k] = order[ii + k], order[ii]
-        for jj in range(ii + 1, nrows):
+        for jj in range(ii + 1, no_rows):
             M[jj, :] -= M[ii, :] * M[jj, ii] / M[ii, ii]
 
-    print(f"M after Gauss Jordan:\n{M}")
     return M, order
 
 
@@ -113,12 +142,10 @@ def reverseGaussJordan(M):
         for j in range(i):
             M[j, :] -= M[j, i] * row
 
-    print(f"M after reversed Gauss Jordan:\n{M}")
     return M
 
 
 def remove_zero_rows(M, tol=1e-16):
     row_norm_1 = np.sum(np.abs(M), -1)
     M = M[(row_norm_1 > tol), :]
-    print(f"M after row elimination:\n{M}")
     return M
