@@ -1,5 +1,4 @@
 import unittest
-from assertpy import assert_that
 
 import numpy as np
 
@@ -23,11 +22,11 @@ class Test_Kirchhoff_matrix(unittest.TestCase):
 
         cr = Circuit(elements)
 
-        Fcut = np.array([[ 1.,  0.,  0.,  0., -1.],
+        Fcut = np.array([[ 1.,  0.,  0.,  1., -1.],
                          [ 0.,  1.,  0.,  0., -1.],
-                         [ 0.,  0.,  1.,  1., -1.]])
+                         [ 0.,  0.,  1.,  0., -1.]])
         
-        self.assertTrue(np.array_equal(cr.Fcut, Fcut))
+        self.assertTrue(np.allclose(cr.Fcut, Fcut))
 
     def test_Floop_matrix(self):
 
@@ -36,10 +35,10 @@ class Test_Kirchhoff_matrix(unittest.TestCase):
         elements = [(0,1,C), (0,1,L), (1,2,L), (2,3,L), (3,0,L)]
         cr = Circuit(elements)
 
-        Floop = np.array([[ 0.,  0., -1.,  1.,  0.], 
+        Floop = np.array([[-1.,  0.,  0.,  1.,  0.], 
                           [ 1.,  1.,  1.,  0.,  1.]])
 
-        self.assertTrue(np.array_equal(cr.Floop, Floop))
+        self.assertTrue(np.allclose(cr.Floop, Floop))
 
     def test_F_matrix(self):
 
@@ -49,13 +48,13 @@ class Test_Kirchhoff_matrix(unittest.TestCase):
 
         cr = Circuit(elements)
 
-        F = np.array([[ 1.,  0.,  0.,  0., -1.,  0.,  0.,  0.,  0.,  0.], 
+        F = np.array([[ 1.,  0.,  0.,  1., -1.,  0.,  0.,  0.,  0.,  0.], 
                       [ 0.,  1.,  0.,  0., -1.,  0.,  0.,  0.,  0.,  0.], 
-                      [ 0.,  0.,  1.,  1., -1.,  0.,  0.,  0.,  0.,  0.], 
-                      [ 0.,  0.,  0.,  0.,  0.,  0.,  0., -1.,  1.,  0.], 
+                      [ 0.,  0.,  1.,  0., -1.,  0.,  0.,  0.,  0.,  0.], 
+                      [ 0.,  0.,  0.,  0.,  0., -1.,  0.,  0.,  1.,  0.], 
                       [ 0.,  0.,  0.,  0.,  0.,  1.,  1.,  1.,  0.,  1.]])
         
-        self.assertTrue(np.array_equal(cr.F, F))
+        self.assertTrue(np.allclose(cr.F, F))
 
     def test_Kernel(self):
         C = Capacitor(value = 1, unit='GHz')
@@ -64,19 +63,9 @@ class Test_Kirchhoff_matrix(unittest.TestCase):
 
         cr = Circuit(elements)
 
-        K = np.array([[ 0.,  1.,  0.,  0.,  0.],
-                      [ 0.,  1.,  0.,  0.,  0.],
-                      [-1.,  1.,  0.,  0.,  0.],
-                      [ 1.,  0.,  0.,  0.,  0.],
-                      [ 0.,  1.,  0.,  0.,  0.],
-                      [ 0.,  0.,  1.,  0.,  0.],
-                      [ 0.,  0.,  0.,  1.,  0.],
-                      [ 0.,  0.,  0.,  0.,  1.],
-                      [ 0.,  0.,  0.,  0.,  1.],
-                      [ 0.,  0., -1., -1., -1.]])
+        self.assertTrue(cr.K.shape[1] == cr.F.shape[1]-np.linalg.matrix_rank(cr.K))
+        self.assertTrue(np.allclose(cr.F@cr.K, np.zeros((cr.F.shape[0], cr.K.shape[1]))))
         
-        self.assertTrue(np.array_equal(cr.K, K))
-
 
 class Test_Gauss_Jordan_method(unittest.TestCase):
 
@@ -87,28 +76,28 @@ class Test_Gauss_Jordan_method(unittest.TestCase):
                                 [ 0.,  0.,  1., -1.,  0.,],
                                 [ 0.,  0.,  0.,  1., -1.,]])
         
-        M_after_GJ = np.array([[-1.,  0.,  0.,  0.,  1.,],
+        M_after_GJ = np.array([[-1.,  0.,  0., -1.,  1.,],
                                [ 0., -1.,  0.,  0.,  1.,],
-                               [ 0.,  0., -1., -1.,  1.,],
+                               [ 0.,  0., -1.,  0.,  1.,],
                                [ 0.,  0.,  0.,  0.,  0.,]])
         
         M_test, _ = GaussJordan(M_before_GJ)
 
-        self.assertTrue(np.array_equal(M_test, M_after_GJ))
+        self.assertTrue(np.allclose(M_test, M_after_GJ))
 
     def test_reverse_Gauss_Jordan(self):
 
-        M_before_reverse_GJ = np.array([[-1.,  0.,  0.,  0.,  1.],
+        M_before_reverse_GJ = np.array([[-1.,  0.,  0., -1.,  1.],
                                         [ 0., -1.,  0.,  0.,  1.],
-                                        [ 0.,  0., -1., -1.,  1.]])
+                                        [ 0.,  0., -1.,  0.,  1.]])
         
-        M_after_reverse_GJ = np.array([[ 1.,  0.,  0.,  0., -1.],
+        M_after_reverse_GJ = np.array([[ 1.,  0.,  0.,  1., -1.],
                                        [ 0.,  1.,  0.,  0., -1.],
-                                       [ 0.,  0.,  1.,  1., -1.]])
+                                       [ 0.,  0.,  1.,  0., -1.]])
         
         M_test = reverseGaussJordan(M_before_reverse_GJ)
         
-        self.assertTrue(np.array_equal(M_test, M_after_reverse_GJ))
+        self.assertTrue(np.allclose(M_test, M_after_reverse_GJ))
 
 
 class Test_omega_function(unittest.TestCase):
@@ -132,9 +121,9 @@ class Test_omega_function(unittest.TestCase):
                              [ 0.,   0.,   0.,   0.5,  0.,   0.,   0.,   0.,   0.,   0. ],
                              [ 0.,   0.,   0.,   0.,   0.5,  0.,   0.,   0.,   0.,   0. ]])
         
-        self.assertTrue(np.array_equal(cr.omega_2B, omega_2B))
+        self.assertTrue(np.allclose(cr.omega_2B, omega_2B))
 
-    def test_omega_alpha_beta(self):
+    def test_omega(self):
 
         C = Capacitor(value = 1, unit='GHz')
         L = Inductor(value = 1, unit = 'GHz')
@@ -142,13 +131,13 @@ class Test_omega_function(unittest.TestCase):
 
         cr = Circuit(elements)
 
-        omega_alpha_beta = np.array([[ 0.,  0.,  0.,  0.,  0.],
-                                     [ 0.,  0.,  1.,  0.,  0.],
-                                     [ 0., -1.,  0.,  0.,  0.],
-                                     [ 0.,  0.,  0.,  0.,  0.],
-                                     [ 0.,  0.,  0.,  0.,  0.]])
+        omega = np.array([[ 0.,  0., -1.,  0.,  0.],
+                          [ 0.,  0.,  1.,  0.,  0.],
+                          [ 1., -1.,  0.,  0.,  0.],
+                          [ 0.,  0.,  0.,  0.,  0.],
+                          [ 0.,  0.,  0.,  0.,  0.]])
         
-        self.assertTrue(np.array_equal(cr.omega_alpha_beta, omega_alpha_beta))
+        self.assertTrue(np.allclose(cr.omega, omega))
 
 
 

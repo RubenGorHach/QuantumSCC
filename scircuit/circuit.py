@@ -46,7 +46,9 @@ class Circuit:
 
         self.Fcut, self.Floop, self.F, self.K = self.Kirchhoff()
 
-        self.omega_2B, self.omega_alpha_beta = self.omega_function()
+        self.omega_2B, self.omega = self.omega_function()
+
+        self.hamiltonian_2B, self.hamiltonian = self.hamiltonian_function()
         
 
 
@@ -89,43 +91,66 @@ class Circuit:
             ]
         )
 
+        # Make sure K is correct
+        assert K.shape[1] == F.shape[1]-np.linalg.matrix_rank(K)
+        assert np.allclose(F@K, np.zeros((F.shape[0], K.shape[1]))) == True
+
         return Fcut, Floop, F, K
     
     def omega_function(self):
         
         # Obtain omega_2B matrix
         omega_2B = np.zeros((2*self.no_elements,2*self.no_elements)) 
-        for ii in range(2*self.no_elements):
-            for jj in range(2*self.no_elements):
-                if jj == ii + self.no_elements:
-                    if isinstance(self.elements[ii][2], Capacitor) == True:
-                        omega_2B[ii,jj] = 0.5
-                    if isinstance(self.elements[ii][2], Inductor) == True:
-                        omega_2B[ii,jj] = -0.5
-                if ii == jj + self.no_elements:
-                    if isinstance(self.elements[jj][2], Capacitor) == True:
-                        omega_2B[ii,jj] = -0.5
-                    if isinstance(self.elements[jj][2], Inductor) == True:
-                        omega_2B[ii,jj] = 0.5
+        for i, elem in enumerate(self.elements):
+
+            if isinstance(elem[2], Capacitor) == True:
+                omega_2B[i, i + self.no_elements] = 0.5
+                omega_2B[i + self.no_elements, i] = -0.5
+
+            if isinstance(elem[2], Inductor) == True:
+                omega_2B[i, i + self.no_elements] = -0.5
+                omega_2B[i + self.no_elements, i] = 0.5
                     
         # Obtain omega_alpha_beta matrix
-        omega_alpha_beta = self.K.T @ omega_2B @ self.K
+        omega = self.K.T @ omega_2B @ self.K
 
-        return omega_2B, omega_alpha_beta
-        
-        
+        return omega_2B, omega
+    
+    def hamiltonian_function(self):
+
+        # Calculate the Hamiltonian prior to the change of variable
+
+        # IMPORTANT -> This is the Hamiltonian for the lineal elements of the circuit, and considering circuits with only linear elements
+        hamiltonian_2B = np.zeros((2*self.no_elements, 2*self.no_elements))
+        for i, elem in enumerate(self.elements):
+
+            if isinstance(elem[2], Capacitor) == True:
+                cap = elem[2]
+                hamiltonian_2B[i, i] = 1/(2*cap.value())
+            
+            if isinstance(elem[2], Inductor) == True:
+                ind = elem[2]
+                hamiltonian_2B[i + self.no_elements, i + self.no_elements] = 1/(2*ind.value())
+
+        # Calculate the Hamiltonian after the change of variable
+        hamiltonian = self.K.T @ hamiltonian_2B @ self.K
+
+        return hamiltonian_2B, hamiltonian
+
+
 def GaussJordan(M):
     # Obtain the matrix dimensions
-    no_rows, no_columns = M.shape
-    assert no_rows <= no_columns
+    nrows, ncolumns = M.shape
+    assert nrows <= ncolumns
     M = M.copy()
-    order = np.arange(no_columns)
-    for ii in range(no_rows):
+    order = np.arange(ncolumns)
+    for ii in range(nrows):
         k = np.argmax(np.abs(M[ii, ii:]))
         if k != 0:
-            M[:, ii], M[:, ii + k] = M[:, ii + k], M[:, ii]
+            Maux = M.copy()
+            M[:, ii], M[:, ii + k] = Maux[:, ii + k], Maux[:, ii]
             order[ii], order[ii + k] = order[ii + k], order[ii]
-        for jj in range(ii + 1, no_rows):
+        for jj in range(ii + 1, nrows):
             M[jj, :] -= M[ii, :] * M[jj, ii] / M[ii, ii]
 
     return M, order
@@ -149,3 +174,5 @@ def remove_zero_rows(M, tol=1e-16):
     row_norm_1 = np.sum(np.abs(M), -1)
     M = M[(row_norm_1 > tol), :]
     return M
+
+
