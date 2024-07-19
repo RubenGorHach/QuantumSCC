@@ -49,11 +49,8 @@ class Circuit:
         self.omega_2B, self.omega = self.omega_function()
 
         self.hamiltonian_2B, self.hamiltonian = self.hamiltonian_function()
-        
-
 
     def Kirchhoff(self):
-
         # Calculate the full Fcut
         Fcut = np.zeros((self.no_nodes, self.no_elements))
 
@@ -76,7 +73,7 @@ class Circuit:
         Floop = np.hstack((-A.T, np.eye(A.shape[1])))
 
         # F = [[Fcut, 0], [0, Floop]] = Kirchhoff matrix
-        F = np.bmat(
+        F = np.block(
             [
                 [Fcut, np.zeros((Fcut.shape[0], Floop.shape[1]))],
                 [np.zeros((Floop.shape[0], Fcut.shape[1])), Floop],
@@ -84,7 +81,7 @@ class Circuit:
         )
 
         # K = [[Floop.T, 0], [0, Fcut.T]] = Kernel matrix
-        K = np.bmat(
+        K = np.block(
             [
                 [Floop.T, np.zeros((Floop.shape[1], Fcut.shape[0]))],
                 [np.zeros((Fcut.shape[1], Floop.shape[0])), Fcut.T],
@@ -92,17 +89,15 @@ class Circuit:
         )
 
         # Make sure K is correct
-        assert K.shape[1] == F.shape[1]-np.linalg.matrix_rank(K)
-        assert np.allclose(F@K, np.zeros((F.shape[0], K.shape[1]))) == True
+        assert K.shape[1] == F.shape[1] - np.linalg.matrix_rank(K)
+        assert np.allclose(F @ K, np.zeros((F.shape[0], K.shape[1]))) == True
 
         return Fcut, Floop, F, K
-    
-    def omega_function(self):
-        
-        # Obtain omega_2B matrix
-        omega_2B = np.zeros((2*self.no_elements,2*self.no_elements)) 
-        for i, elem in enumerate(self.elements):
 
+    def omega_function(self):
+        # Obtain omega_2B matrix
+        omega_2B = np.zeros((2 * self.no_elements, 2 * self.no_elements))
+        for i, elem in enumerate(self.elements):
             if isinstance(elem[2], Capacitor) == True:
                 omega_2B[i, i + self.no_elements] = 0.5
                 omega_2B[i + self.no_elements, i] = -0.5
@@ -110,27 +105,27 @@ class Circuit:
             if isinstance(elem[2], Inductor) == True:
                 omega_2B[i, i + self.no_elements] = -0.5
                 omega_2B[i + self.no_elements, i] = 0.5
-                    
+
         # Obtain omega_alpha_beta matrix
         omega = self.K.T @ omega_2B @ self.K
 
         return omega_2B, omega
-    
-    def hamiltonian_function(self):
 
+    def hamiltonian_function(self):
         # Calculate the Hamiltonian prior to the change of variable
 
         # IMPORTANT -> This is the Hamiltonian for the lineal elements of the circuit, and considering circuits with only linear elements
-        hamiltonian_2B = np.zeros((2*self.no_elements, 2*self.no_elements))
+        hamiltonian_2B = np.zeros((2 * self.no_elements, 2 * self.no_elements))
         for i, elem in enumerate(self.elements):
-
             if isinstance(elem[2], Capacitor) == True:
                 cap = elem[2]
-                hamiltonian_2B[i, i] = 1/(2*cap.value())
-            
+                hamiltonian_2B[i, i] = 1 / (2 * cap.value())
+
             if isinstance(elem[2], Inductor) == True:
                 ind = elem[2]
-                hamiltonian_2B[i + self.no_elements, i + self.no_elements] = 1/(2*ind.value())
+                hamiltonian_2B[i + self.no_elements, i + self.no_elements] = 1 / (
+                    2 * ind.value()
+                )
 
         # Calculate the Hamiltonian after the change of variable
         hamiltonian = self.K.T @ hamiltonian_2B @ self.K
@@ -174,5 +169,3 @@ def remove_zero_rows(M, tol=1e-16):
     row_norm_1 = np.sum(np.abs(M), -1)
     M = M[(row_norm_1 > tol), :]
     return M
-
-
