@@ -4,13 +4,14 @@ import numpy as np
 
 from scircuit.circuit import (
     Circuit, 
-    GaussJordan, 
-    reverseGaussJordan
 )
+
 from scircuit.elements import (
     Capacitor, 
     Inductor
 )
+
+from scircuit.algebra import *
 
 class Test_Kirchhoff_matrix(unittest.TestCase):
 
