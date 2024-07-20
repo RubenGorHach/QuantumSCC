@@ -12,6 +12,8 @@ from .elements import (
     Loop,
 )
 
+from .algebra import *
+
 Edge = tuple[int, int, object]
 
 
@@ -131,41 +133,3 @@ class Circuit:
         hamiltonian = self.K.T @ hamiltonian_2B @ self.K
 
         return hamiltonian_2B, hamiltonian
-
-
-def GaussJordan(M):
-    # Obtain the matrix dimensions
-    nrows, ncolumns = M.shape
-    assert nrows <= ncolumns
-    M = M.copy()
-    order = np.arange(ncolumns)
-    for ii in range(nrows):
-        k = np.argmax(np.abs(M[ii, ii:]))
-        if k != 0:
-            Maux = M.copy()
-            M[:, ii], M[:, ii + k] = Maux[:, ii + k], Maux[:, ii]
-            order[ii], order[ii + k] = order[ii + k], order[ii]
-        for jj in range(ii + 1, nrows):
-            M[jj, :] -= M[ii, :] * M[jj, ii] / M[ii, ii]
-
-    return M, order
-
-
-def reverseGaussJordan(M):
-    if False:
-        factor = 1 / np.diag(M)
-        M = factor[:, np.newaxis] * M
-    else:
-        M = np.diag(1.0 / np.diag(M)) @ M
-
-    for i, row in reversed(list(enumerate(M))):
-        for j in range(i):
-            M[j, :] -= M[j, i] * row
-
-    return M
-
-
-def remove_zero_rows(M, tol=1e-16):
-    row_norm_1 = np.sum(np.abs(M), -1)
-    M = M[(row_norm_1 > tol), :]
-    return M
