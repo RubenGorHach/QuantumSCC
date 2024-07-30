@@ -11,8 +11,6 @@ from scircuit.elements import (
     Inductor
 )
 
-from scircuit.algebra import *
-
 class Test_Kirchhoff_matrix(unittest.TestCase):
 
     def test_Fcut_matrix(self):
@@ -66,39 +64,6 @@ class Test_Kirchhoff_matrix(unittest.TestCase):
 
         self.assertTrue(cr.K.shape[1] == cr.F.shape[1]-np.linalg.matrix_rank(cr.K))
         self.assertTrue(np.allclose(cr.F@cr.K, np.zeros((cr.F.shape[0], cr.K.shape[1]))))
-        
-
-class Test_Gauss_Jordan_method(unittest.TestCase):
-
-    def test_direct_Gauss_Jordan(self):
-
-        M_before_GJ = np.array([[-1., -1.,  0.,  0.,  1.,],
-                                [ 1.,  1., -1.,  0.,  0.,],
-                                [ 0.,  0.,  1., -1.,  0.,],
-                                [ 0.,  0.,  0.,  1., -1.,]])
-        
-        M_after_GJ = np.array([[-1.,  0.,  0., -1.,  1.,],
-                               [ 0., -1.,  0.,  0.,  1.,],
-                               [ 0.,  0., -1.,  0.,  1.,],
-                               [ 0.,  0.,  0.,  0.,  0.,]])
-        
-        M_test, _ = GaussJordan(M_before_GJ)
-
-        self.assertTrue(np.allclose(M_test, M_after_GJ))
-
-    def test_reverse_Gauss_Jordan(self):
-
-        M_before_reverse_GJ = np.array([[-1.,  0.,  0., -1.,  1.],
-                                        [ 0., -1.,  0.,  0.,  1.],
-                                        [ 0.,  0., -1.,  0.,  1.]])
-        
-        M_after_reverse_GJ = np.array([[ 1.,  0.,  0.,  1., -1.],
-                                       [ 0.,  1.,  0.,  0., -1.],
-                                       [ 0.,  0.,  1.,  0., -1.]])
-        
-        M_test = reverseGaussJordan(M_before_reverse_GJ)
-        
-        self.assertTrue(np.allclose(M_test, M_after_reverse_GJ))
 
 
 class Test_omega_function(unittest.TestCase):
@@ -124,7 +89,7 @@ class Test_omega_function(unittest.TestCase):
         
         self.assertTrue(np.allclose(cr.omega_2B, omega_2B))
 
-    def test_omega(self):
+    def test_omega_canonical(self):
 
         C = Capacitor(value = 1, unit='GHz')
         L = Inductor(value = 1, unit = 'GHz')
@@ -132,13 +97,13 @@ class Test_omega_function(unittest.TestCase):
 
         cr = Circuit(elements)
 
-        omega = np.array([[ 0.,  0., -1.,  0.,  0.],
-                          [ 0.,  0.,  1.,  0.,  0.],
-                          [ 1., -1.,  0.,  0.,  0.],
-                          [ 0.,  0.,  0.,  0.,  0.],
-                          [ 0.,  0.,  0.,  0.,  0.]])
+        omega_canonical = np.array([[ 0.,  1.,  0.,  0.,  0.],
+                                    [-1.,  0.,  0.,  0.,  0.],
+                                    [ 0.,  0.,  0.,  0.,  0.],
+                                    [ 0.,  0.,  0.,  0.,  0.],
+                                    [ 0.,  0.,  0.,  0.,  0.]])
         
-        self.assertTrue(np.allclose(cr.omega, omega))
+        self.assertTrue(np.allclose(cr.omega_canonical, omega_canonical))
 
 
 

@@ -48,9 +48,9 @@ class Circuit:
 
         self.Fcut, self.Floop, self.F, self.K = self.Kirchhoff()
 
-        self.omega_2B, self.omega = self.omega_function()
+        self.omega_2B, self.omega_canonical, self.canonical_basis_change = self.omega_function()
 
-        self.hamiltonian_2B, self.hamiltonian = self.hamiltonian_function()
+        self.hamiltonian_2B, self.hamiltonian = self.hamiltonian_function_lineal_elements()
 
     def Kirchhoff(self):
         # Calculate the full Fcut
@@ -108,28 +108,34 @@ class Circuit:
                 omega_2B[i, i + self.no_elements] = -0.5
                 omega_2B[i + self.no_elements, i] = 0.5
 
-        # Obtain omega_alpha_beta matrix
-        omega = self.K.T @ omega_2B @ self.K
+        # Obtain omega matrix 
+        omega_non_canonical = self.K.T @ omega_2B @ self.K
 
-        return omega_2B, omega
+        # Obtain the canonical form of the omega matrix and the basis change matrix
+        omega_canonical, canonical_basis_change = canonical_form(omega_non_canonical)
 
-    def hamiltonian_function(self):
-        # Calculate the Hamiltonian prior to the change of variable
+        return omega_2B, omega_canonical, canonical_basis_change
 
+    def hamiltonian_function_lineal_elements(self):
         # IMPORTANT -> This is the Hamiltonian for the lineal elements of the circuit, and considering circuits with only linear elements
+
+        # Calculate the Hamiltonian prior to the change of variable given by the Kirchhoff's equtions
         hamiltonian_2B = np.zeros((2 * self.no_elements, 2 * self.no_elements))
         for i, elem in enumerate(self.elements):
             if isinstance(elem[2], Capacitor) == True:
-                cap = elem[2]
-                hamiltonian_2B[i, i] = 1 / (2 * cap.value())
+                capacitor = elem[2]
+                hamiltonian_2B[i, i] = 1 / (2 * capacitor.value())
 
             if isinstance(elem[2], Inductor) == True:
-                ind = elem[2]
+                inductor = elem[2]
                 hamiltonian_2B[i + self.no_elements, i + self.no_elements] = 1 / (
-                    2 * ind.value()
+                    2 * inductor.value()
                 )
 
-        # Calculate the Hamiltonian after the change of variable
+        # Calculate the Hamiltonian after the change of variable given by the Kirchhoff's equtions
         hamiltonian = self.K.T @ hamiltonian_2B @ self.K
+
+        # Calculate the Hamiltonian after the change of variable given by the canonical form of omega
+        #hamiltonian = self.canonical_basis_change @ hamiltonian @ self.canonical_basis_change.T
 
         return hamiltonian_2B, hamiltonian
