@@ -65,6 +65,17 @@ class Test_canonical_form_function(unittest.TestCase):
 
         self.assertTrue(np.allclose(canonical_matrix, canonical_basis_change @ matrix_before_transformation @ canonical_basis_change.T))
 
+    def test_canonical_form_random_antisymmetric_matrix(self):
+
+        size = 5
+        random_antisymmetric_matrix = np.random.normal(size=(size, size))
+        random_antisymmetric_matrix = np.tril(random_antisymmetric_matrix, k=-1)
+        random_antisymmetric_matrix = random_antisymmetric_matrix - random_antisymmetric_matrix.T
+
+        canonical_matrix, canonical_basis_change = canonical_form(random_antisymmetric_matrix)
+
+        self.assertTrue(np.allclose(canonical_matrix, canonical_basis_change @ random_antisymmetric_matrix @ canonical_basis_change.T))
+
         
 
 

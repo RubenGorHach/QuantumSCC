@@ -45,12 +45,13 @@ class Circuit:
         self.no_elements = len(self.elements)
         self.node_dict = node_dictionary
         self.no_nodes = len(node_dictionary)
+        
 
         self.Fcut, self.Floop, self.F, self.K = self.Kirchhoff()
 
-        self.omega_2B, self.omega_canonical, self.canonical_basis_change = self.omega_function()
+        self.E_2B, self.E_canonical, self.canonical_basis_change, self.number_of_pairs = self.omega_function()
 
-        self.hamiltonian_2B, self.hamiltonian = self.hamiltonian_function_lineal_elements()
+        self.hamiltonian_2B, self.hamiltonian, self.hamiltonian_xi = self.hamiltonian_function_lineal_elements()
 
     def Kirchhoff(self):
         # Calculate the full Fcut
@@ -97,24 +98,24 @@ class Circuit:
         return Fcut, Floop, F, K
 
     def omega_function(self):
-        # Obtain omega_2B matrix
-        omega_2B = np.zeros((2 * self.no_elements, 2 * self.no_elements))
+        # Obtain E_2B matrix
+        E_2B = np.zeros((2 * self.no_elements, 2 * self.no_elements))
         for i, elem in enumerate(self.elements):
             if isinstance(elem[2], Capacitor) == True:
-                omega_2B[i, i + self.no_elements] = 0.5
-                omega_2B[i + self.no_elements, i] = -0.5
+                E_2B[i, i + self.no_elements] = 0.5
+                E_2B[i + self.no_elements, i] = -0.5
 
             if isinstance(elem[2], Inductor) == True:
-                omega_2B[i, i + self.no_elements] = -0.5
-                omega_2B[i + self.no_elements, i] = 0.5
+                E_2B[i, i + self.no_elements] = -0.5
+                E_2B[i + self.no_elements, i] = 0.5
 
-        # Obtain omega matrix 
-        omega_non_canonical = self.K.T @ omega_2B @ self.K
+        # Obtain omega matrix, E, in its non canonical form
+        E_non_canonical = self.K.T @ E_2B @ self.K
 
-        # Obtain the canonical form of the omega matrix and the basis change matrix
-        omega_canonical, canonical_basis_change = canonical_form(omega_non_canonical)
+        # Obtain the canonical form of the omega matrix, E, and the basis change matrix
+        E_canonical, canonical_basis_change, number_of_pairs = canonical_form(E_non_canonical)
 
-        return omega_2B, omega_canonical, canonical_basis_change
+        return E_2B, E_canonical, canonical_basis_change, number_of_pairs
 
     def hamiltonian_function_lineal_elements(self):
         # IMPORTANT -> This is the Hamiltonian for the lineal elements of the circuit, and considering circuits with only linear elements
@@ -132,10 +133,28 @@ class Circuit:
                     2 * inductor.value()
                 )
 
-        # Calculate the Hamiltonian after the change of variable given by the Kirchhoff's equtions
-        hamiltonian = self.K.T @ hamiltonian_2B @ self.K
+        # Calculate the Hamiltonian after the change of variable given by the Kirchhoff's equations
+        hamiltonian_after_Kirchhoff = self.K.T @ hamiltonian_2B @ self.K
 
         # Calculate the Hamiltonian after the change of variable given by the canonical form of omega
-        #hamiltonian = self.canonical_basis_change @ hamiltonian @ self.canonical_basis_change.T
+        hamiltonian = self.canonical_basis_change @ hamiltonian_after_Kirchhoff @ self.canonical_basis_change.T
 
-        return hamiltonian_2B, hamiltonian
+        # Decompose the Hamiltonian matrix into 4 blocks: ((H_11, H_12);(H_21, H_22)), according to the matrix E_canonical
+        hamiltonian_11 = hamiltonian[:2*self.number_of_pairs, :2*self.number_of_pairs]
+        hamiltonian_12 = hamiltonian[:2*self.number_of_pairs, 2*self.number_of_pairs:]
+        hamiltonian_21 = hamiltonian[2*self.number_of_pairs:, :2*self.number_of_pairs]
+        hamiltonian_22 = hamiltonian[2*self.number_of_pairs:, 2*self.number_of_pairs:]
+
+        assert np.allclose(hamiltonian_12, hamiltonian_21.T) == True, "There is an error in the decomposition of the Hamiltonian in blocks"
+
+        # Verify that the equation dH/dw = 0 has a solution by testing that hamiltonian_22 has a pseudo-inverse form
+        rank_hamiltonian_22 = np.linalg.matrix_rank(hamiltonian_22)
+        rows_hamiltonian_22, columns_hamiltonian_22 = hamiltonian_22.shape
+
+        if rank_hamiltonian_22 < min(rows_hamiltonian_22, columns_hamiltonian_22):
+            raise ValueError("There is no solution for the equation dH/dw = 0. The circuit does not present Hamiltonian dynamics.")
+
+        # If there is solution, calculate the final matrix expression for the hamiltonian, hamiltonian_xi
+        hamiltonian_xi = hamiltonian_11 - hamiltonian_12@np.linalg.pinv(hamiltonian_22)@hamiltonian_21
+
+        return hamiltonian_2B, hamiltonian, hamiltonian_xi

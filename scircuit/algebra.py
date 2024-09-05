@@ -19,14 +19,14 @@ def GaussJordan(M):
     assert nrows <= ncolumns, "Kirchhoff matrix dimensions are incorrect."
     M = M.copy()
     order = np.arange(ncolumns)
-    for ii in range(nrows):
-        k = np.argmax(np.abs(M[ii, ii:]))
+    for i in range(nrows):
+        k = np.argmax(np.abs(M[i, i:]))
         if k != 0:
             Maux = M.copy()
-            M[:, ii], M[:, ii + k] = Maux[:, ii + k], Maux[:, ii]
-            order[ii], order[ii + k] = order[ii + k], order[ii]
-        for jj in range(ii + 1, nrows):
-            M[jj, :] -= M[ii, :] * M[jj, ii] / M[ii, ii]
+            M[:, i], M[:, i + k] = Maux[:, i + k], Maux[:, i]
+            order[i], order[i + k] = order[i + k], order[i]
+        for j in range(i + 1, nrows):
+            M[j, :] -= M[i, :] * M[j, i] / M[i, i]
 
     return M, order
 
@@ -134,14 +134,14 @@ def canonical_form(A: Matrix, tol: float = 1e-16) -> tuple[Matrix, Matrix]:
 
     # Construct the canonical matrix, J, for the matrix A
     dimension = A.shape[0]
-    num_pairs = len(pairs)
+    number_of_pairs = len(pairs)
     J = np.zeros((dimension, dimension))
-    I = np.eye(num_pairs)
+    I = np.eye(number_of_pairs)
     
-    J[:num_pairs, num_pairs:num_pairs*2] = I
-    J[num_pairs:num_pairs*2, :num_pairs] = -I
+    J[:number_of_pairs, number_of_pairs:number_of_pairs*2] = I
+    J[number_of_pairs:number_of_pairs*2, :number_of_pairs] = -I
 
     # Ensure both results are correct
     assert np.allclose(J, V @ A @ V.T) == True, "There is an error in the construction of the canonical matrix"
     
-    return J, V
+    return J, V, number_of_pairs
