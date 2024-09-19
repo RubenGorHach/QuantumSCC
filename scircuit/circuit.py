@@ -49,9 +49,9 @@ class Circuit:
 
         self.Fcut, self.Floop, self.F, self.K = self.Kirchhoff()
 
-        self.E_2B, self.E_canonical, self.canonical_basis_change, self.number_of_pairs = self.omega_function()
+        self.E_2B, self.E_symplectic, self.symplectic_basis_change, self.number_of_pairs = self.omega_function()
 
-        self.hamiltonian_2B, self.hamiltonian, self.hamiltonian_xi = self.hamiltonian_function_lineal_elements()
+        self.Total_energy_2B, self.Total_energy_symplectic_basis, self.hamiltonian = self.hamiltonian_function_lineal_elements()
 
     def Kirchhoff(self):
         # Calculate the full Fcut
@@ -109,52 +109,69 @@ class Circuit:
                 E_2B[i, i + self.no_elements] = -0.5
                 E_2B[i + self.no_elements, i] = 0.5
 
-        # Obtain omega matrix, E, in its non canonical form
-        E_non_canonical = self.K.T @ E_2B @ self.K
+        # Obtain omega matrix, E, in its non symplectic form
+        E_non_symplectic = self.K.T @ E_2B @ self.K
 
-        # Obtain the canonical form of the omega matrix, E, and the basis change matrix
-        E_canonical, canonical_basis_change, number_of_pairs = canonical_form(E_non_canonical)
+        # Obtain the symplectic form of the omega matrix, E, and the basis change matrix
+        E_symplectic, symplectic_basis_change, number_of_pairs = symplectic_form(E_non_symplectic)
 
-        return E_2B, E_canonical, canonical_basis_change, number_of_pairs
+        return E_2B, E_symplectic, symplectic_basis_change, number_of_pairs
 
     def hamiltonian_function_lineal_elements(self):
-        # IMPORTANT -> This is the Hamiltonian for the lineal elements of the circuit, and considering circuits with only linear elements
+        # IMPORTANT -> This is the fuction that calculates the Hamiltonian for the lineal elements of the circuit, and considering circuits with only linear elements
 
-        # Calculate the Hamiltonian prior to the change of variable given by the Kirchhoff's equtions
-        hamiltonian_2B = np.zeros((2 * self.no_elements, 2 * self.no_elements))
+        # Calculate the initial total energy function matrix (prior to the change of variable given by the Kirchhoff's equtions)
+        Total_energy_2B = np.zeros((2 * self.no_elements, 2 * self.no_elements))
         for i, elem in enumerate(self.elements):
             if isinstance(elem[2], Capacitor) == True:
                 capacitor = elem[2]
-                hamiltonian_2B[i, i] = 1 / (2 * capacitor.value())
+                Total_energy_2B[i, i] = capacitor.energy() # Energy of the capacitor in GHz by default
 
             if isinstance(elem[2], Inductor) == True:
                 inductor = elem[2]
-                hamiltonian_2B[i + self.no_elements, i + self.no_elements] = 1 / (
-                    2 * inductor.value()
-                )
+                Total_energy_2B[i + self.no_elements, i + self.no_elements] = inductor.energy() # Energy of the inductor in GHz by default
 
-        # Calculate the Hamiltonian after the change of variable given by the Kirchhoff's equations
-        hamiltonian_after_Kirchhoff = self.K.T @ hamiltonian_2B @ self.K
+        # Calculate the total energy function matrix after the change of variable given by the Kirchhoff's equations
+        Total_energy_after_Kirchhoff = self.K.T @ Total_energy_2B @ self.K
+        
+        # Calculate the total energy function matrix after the change of variable given by the symplectic form of omega
+        Total_energy_symplectic_basis = self.symplectic_basis_change.T @ Total_energy_after_Kirchhoff @ self.symplectic_basis_change
 
-        # Calculate the Hamiltonian after the change of variable given by the canonical form of omega
-        hamiltonian = self.canonical_basis_change @ hamiltonian_after_Kirchhoff @ self.canonical_basis_change.T
+        # Remove from the previous matrix the rows and columns that correspond to variables without dynamics
+        number_rows, _ = Total_energy_symplectic_basis.shape
+        rows_columns_to_delete = []
 
-        # Decompose the Hamiltonian matrix into 4 blocks: ((H_11, H_12);(H_21, H_22)), according to the matrix E_canonical
-        hamiltonian_11 = hamiltonian[:2*self.number_of_pairs, :2*self.number_of_pairs]
-        hamiltonian_12 = hamiltonian[:2*self.number_of_pairs, 2*self.number_of_pairs:]
-        hamiltonian_21 = hamiltonian[2*self.number_of_pairs:, :2*self.number_of_pairs]
-        hamiltonian_22 = hamiltonian[2*self.number_of_pairs:, 2*self.number_of_pairs:]
+        for i in range(2*self.number_of_pairs, number_rows):
+            if np.all(np.abs(Total_energy_symplectic_basis[i,:]) <= 1e-12) and np.all(np.abs(Total_energy_symplectic_basis[:,i]) <= 1e-12):
+                rows_columns_to_delete.append(i)
+        
+        Total_energy_symplectic_basis = np.delete(Total_energy_symplectic_basis, rows_columns_to_delete, axis=0)
+        Total_energy_symplectic_basis = np.delete(Total_energy_symplectic_basis, rows_columns_to_delete, axis=1)
 
-        assert np.allclose(hamiltonian_12, hamiltonian_21.T) == True, "There is an error in the decomposition of the Hamiltonian in blocks"
+        # If the size of the new Total_energy_symplectic_basis matrix is equal to 2*self.number_of_pairs, this matrix is the Hamiltonian
+        if len(Total_energy_symplectic_basis) == 2*self.number_of_pairs:
+            hamiltonian = Total_energy_symplectic_basis
 
-        # Verify that the equation dH/dw = 0 has a solution by testing that hamiltonian_22 has a pseudo-inverse form
-        rank_hamiltonian_22 = np.linalg.matrix_rank(hamiltonian_22)
-        rows_hamiltonian_22, columns_hamiltonian_22 = hamiltonian_22.shape
+            return Total_energy_2B, Total_energy_symplectic_basis, hamiltonian
+        
+        # If the previous condition does not happend, we need to solve d(Total_energy_symplectic_basis)/dw = 0
 
-        if rank_hamiltonian_22 < min(rows_hamiltonian_22, columns_hamiltonian_22):
+        # Decompose the Total_energy_symplectic_basis matrix into 4 blocks: ((TEF_11, TEF_12);(TEF_21, TEF_22)), according to the matrix E_symplectic
+        TEF_11 = Total_energy_symplectic_basis[:2*self.number_of_pairs, :2*self.number_of_pairs]
+        TEF_12 = Total_energy_symplectic_basis[:2*self.number_of_pairs, 2*self.number_of_pairs:]
+        TEF_21 = Total_energy_symplectic_basis[2*self.number_of_pairs:, :2*self.number_of_pairs]
+        TEF_22 = Total_energy_symplectic_basis[2*self.number_of_pairs:, 2*self.number_of_pairs:]
+
+        assert np.allclose(TEF_12, TEF_21.T) == True, "There is an error in the decomposition of the total energy function matrix in blocks"
+
+        # Verify that the equation dH/dw = 0 has a solution by testing that TEF_22 has a inverse form
+        rank_TEF_22 = np.linalg.matrix_rank(TEF_22)
+        rows_TEF_22, columns_TEF_22 = TEF_22.shape
+
+        if rank_TEF_22 < min(rows_TEF_22, columns_TEF_22):
             raise ValueError("There is no solution for the equation dH/dw = 0. The circuit does not present Hamiltonian dynamics.")
 
-        # If there is solution, calculate the final matrix expression for the hamiltonian, hamiltonian_xi
-        hamiltonian_xi = hamiltonian_11 - hamiltonian_12@np.linalg.pinv(hamiltonian_22)@hamiltonian_21
+        # If there is solution, calculate the final matrix expression for the total energy function, which is the Hamiltonian
+        hamiltonian = TEF_11 - TEF_12@np.linalg.inv(TEF_22)@TEF_21
 
-        return hamiltonian_2B, hamiltonian, hamiltonian_xi
+        return Total_energy_2B, Total_energy_symplectic_basis, hamiltonian

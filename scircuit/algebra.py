@@ -73,9 +73,9 @@ def remove_zero_rows(M, tol=1e-16):
 
 Matrix = np.ndarray
 
-def canonical_form(A: Matrix, tol: float = 1e-16) -> tuple[Matrix, Matrix]:
+def symplectic_form(A: Matrix, tol: float = 1e-16) -> tuple[Matrix, Matrix]:
     """
-    Produce the canonical form for an antisymmetric matrix.
+    Produce the symplectic form for an antisymmetric matrix.
     
     Parameters
     ----------
@@ -123,16 +123,17 @@ def canonical_form(A: Matrix, tol: float = 1e-16) -> tuple[Matrix, Matrix]:
                 found[j] = 1
                 b = s[i].imag
                 if b > 0:
-                    x, y = U[:, i].real, U[:, i].imag
+                    x, y = U[:, i].real, U[:, i].imag    
                 else:
                     x, y = U[:, j].real, U[:, j].imag
                     b = -b
                 pairs.append((b, x / np.sqrt(b * 0.5), y / np.sqrt(b * 0.5)))
+                print(pairs)
                 
     # Construct the base change matrix, V
-    V = np.array([vr for b, vr, _ in pairs] + [vi for b, _, vi in pairs] + zeros)
+    V = np.array([vr for b, vr, _ in pairs] + [vi for b, _, vi in pairs] + zeros).T
 
-    # Construct the canonical matrix, J, for the matrix A
+    # Construct the symplectic matrix, J, for the matrix A
     dimension = A.shape[0]
     number_of_pairs = len(pairs)
     J = np.zeros((dimension, dimension))
@@ -142,6 +143,6 @@ def canonical_form(A: Matrix, tol: float = 1e-16) -> tuple[Matrix, Matrix]:
     J[number_of_pairs:number_of_pairs*2, :number_of_pairs] = -I
 
     # Ensure both results are correct
-    assert np.allclose(J, V @ A @ V.T) == True, "There is an error in the construction of the canonical matrix"
+    assert np.allclose(J, V.T @ A @ V) == True, "There is an error in the construction of the symplectic matrix"
     
     return J, V, number_of_pairs

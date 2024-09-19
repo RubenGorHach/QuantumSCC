@@ -89,7 +89,7 @@ class Test_omega_function(unittest.TestCase):
         
         self.assertTrue(np.allclose(cr.E_2B, E_2B))
 
-    def test_omega_canonical(self):
+    def test_omega_symplectic(self):
 
         C = Capacitor(value = 1, unit='GHz')
         L = Inductor(value = 1, unit = 'GHz')
@@ -97,13 +97,13 @@ class Test_omega_function(unittest.TestCase):
 
         cr = Circuit(elements)
 
-        E_canonical = np.array([[ 0.,  1.,  0.,  0.,  0.],
+        E_symplectic = np.array([[ 0.,  1.,  0.,  0.,  0.],
                                 [-1.,  0.,  0.,  0.,  0.],
                                 [ 0.,  0.,  0.,  0.,  0.],
                                 [ 0.,  0.,  0.,  0.,  0.],
                                 [ 0.,  0.,  0.,  0.,  0.]])
         
-        self.assertTrue(np.allclose(cr.E_canonical, E_canonical))
+        self.assertTrue(np.allclose(cr.E_symplectic, E_symplectic))
 
 
 
