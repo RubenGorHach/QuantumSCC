@@ -231,7 +231,7 @@ class Inductor:
             lMean = self.lValue * unt.henry_list[self.unit]
         else:
             E_l = self.lValue * unt.freq_list[self.unit] * (2 * np.pi * unt.hbar)
-            lMean = (unt.Phi0 / 2 / np.pi) ** 2 / E_l
+            lMean = (unt.Phi0) ** 2 / (2 * E_l)
 
         if not random:
             return lMean
@@ -248,8 +248,8 @@ class Inductor:
         else:
             l = self.lValue * unt.henry_list[self.unit]
             return (
-                (unt.Phi0 / 2 / np.pi) ** 2
-                / l
+                (unt.Phi0) ** 2
+                / (2 * l)
                 / (2 * np.pi * unt.hbar)
                 / unt.get_unit_freq()
             )

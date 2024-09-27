@@ -67,14 +67,15 @@ class Test_symplectic_form_function(unittest.TestCase):
 
     def test_symplectic_form_random_antisymmetric_matrix(self):
 
-        size = 7
-        random_antisymmetric_matrix = np.random.normal(size=(size, size))
-        random_antisymmetric_matrix = np.tril(random_antisymmetric_matrix, k=-1)
-        random_antisymmetric_matrix = random_antisymmetric_matrix - random_antisymmetric_matrix.T
+        size = 3
+        random_block = np.random.normal(size=(size, size))
+        random_antisymmetric_matrix_by_blocks = np.zeros((2*size, 2*size))
+        random_antisymmetric_matrix_by_blocks[:size,  size:] = random_block
+        random_antisymmetric_matrix_by_blocks[size:, :size] = -random_block.T
 
-        symplectic_matrix, symplectic_basis_change, _ = symplectic_form(random_antisymmetric_matrix)
+        symplectic_matrix, symplectic_basis_change, _ = symplectic_form(random_antisymmetric_matrix_by_blocks)
 
-        self.assertTrue(np.allclose(symplectic_matrix, symplectic_basis_change.T @ random_antisymmetric_matrix @ symplectic_basis_change))
+        self.assertTrue(np.allclose(symplectic_matrix, symplectic_basis_change.T @ random_antisymmetric_matrix_by_blocks @ symplectic_basis_change))
 
         
 

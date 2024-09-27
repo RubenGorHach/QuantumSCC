@@ -71,6 +71,24 @@ def remove_zero_rows(M, tol=1e-16):
     return M
 
 
+def first_nonzero_index(v, tol=1e-14):
+    """
+    It returns the index of the firs non-zero element in the vector v
+    Retorna el índice del primer elemento no nulo en el vector v, con una tolerancia.
+
+    Parameters
+    ----------
+        v:
+            Vector from which we want the first non-zero index.
+        tol:
+            Tolerance below which the element is considered zero. By default, it is 1e-16.
+    """
+    for i, val in enumerate(v):
+        if abs(val) > tol:  
+            return i
+    return None  # If there are no non-zero elements, it returns None
+
+
 Matrix = np.ndarray
 
 def symplectic_form(A: Matrix, tol: float = 1e-16) -> tuple[Matrix, Matrix]:
@@ -110,6 +128,7 @@ def symplectic_form(A: Matrix, tol: float = 1e-16) -> tuple[Matrix, Matrix]:
 
     found = 0 * U[:, 0]
     pairs = []
+    ordered_pairs = []
     zeros = []
     for i, overlaps in enumerate(K):
         if found[i] == 0:
@@ -123,26 +142,35 @@ def symplectic_form(A: Matrix, tol: float = 1e-16) -> tuple[Matrix, Matrix]:
                 found[j] = 1
                 b = s[i].imag
                 if b > 0:
-                    x, y = U[:, i].real, U[:, i].imag    
+                    x, y = U[:, i].real, U[:, i].imag   
                 else:
                     x, y = U[:, j].real, U[:, j].imag
                     b = -b
                 pairs.append((b, x / np.sqrt(b * 0.5), y / np.sqrt(b * 0.5)))
-                print(pairs)
-                
-    # Construct the base change matrix, V
-    V = np.array([vr for b, vr, _ in pairs] + [vi for b, _, vi in pairs] + zeros).T
 
-    # Construct the symplectic matrix, J, for the matrix A
+                if first_nonzero_index(x) < first_nonzero_index(y):
+                    ordered_pairs.append((b, x / np.sqrt(b * 0.5), y / np.sqrt(b * 0.5)))
+                elif first_nonzero_index(y) < first_nonzero_index(x):
+                    ordered_pairs.append((b, y / np.sqrt(b * 0.5), x / np.sqrt(b * 0.5)))
+
+    assert len(pairs) == len(ordered_pairs), "There is an error in the construction of the 'ordered_pairs' array"
+
+    # Construct the base change matrix, V
+    V = np.array([upper_v for b, upper_v, _ in ordered_pairs] + [lower_v for b, _, lower_v in ordered_pairs] + zeros).T
+
+    # Construct the symplectic matrix, J, for the matrix A.
     dimension = A.shape[0]
     number_of_pairs = len(pairs)
-    J = np.zeros((dimension, dimension))
+    J_abs = np.zeros((dimension, dimension))
     I = np.eye(number_of_pairs)
     
-    J[:number_of_pairs, number_of_pairs:number_of_pairs*2] = I
-    J[number_of_pairs:number_of_pairs*2, :number_of_pairs] = -I
+    J_abs[:number_of_pairs, number_of_pairs:number_of_pairs*2] = I
+    J_abs[number_of_pairs:number_of_pairs*2, :number_of_pairs] = I
 
-    # Ensure both results are correct
-    assert np.allclose(J, V.T @ A @ V) == True, "There is an error in the construction of the symplectic matrix"
-    
+    J = J_abs * np.sign(V.T @ A @ V)
+
+    assert np.allclose(J, (V.T @ A @ V)), "There is an error in the construction of the symplectic matrix"
+
     return J, V, number_of_pairs
+    
+

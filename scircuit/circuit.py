@@ -172,6 +172,6 @@ class Circuit:
             raise ValueError("There is no solution for the equation dH/dw = 0. The circuit does not present Hamiltonian dynamics.")
 
         # If there is solution, calculate the final matrix expression for the total energy function, which is the Hamiltonian
-        hamiltonian = TEF_11 - TEF_12@np.linalg.inv(TEF_22)@TEF_21
+        hamiltonian = TEF_11 - TEF_12 @ np.linalg.inv(TEF_22) @ TEF_21
 
         return Total_energy_2B, Total_energy_symplectic_basis, hamiltonian

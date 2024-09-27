@@ -97,11 +97,11 @@ class Test_omega_function(unittest.TestCase):
 
         cr = Circuit(elements)
 
-        E_symplectic = np.array([[ 0.,  1.,  0.,  0.,  0.],
-                                [-1.,  0.,  0.,  0.,  0.],
-                                [ 0.,  0.,  0.,  0.,  0.],
-                                [ 0.,  0.,  0.,  0.,  0.],
-                                [ 0.,  0.,  0.,  0.,  0.]])
+        E_symplectic = np.array([[ 0., -1.,  0.,  0.,  0.],
+                                 [ 1.,  0.,  0.,  0.,  0.],
+                                 [ 0.,  0.,  0.,  0.,  0.],
+                                 [ 0.,  0.,  0.,  0.,  0.],
+                                 [ 0.,  0.,  0.,  0.,  0.]])
         
         self.assertTrue(np.allclose(cr.E_symplectic, E_symplectic))
 
