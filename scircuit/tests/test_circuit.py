@@ -97,13 +97,63 @@ class Test_omega_function(unittest.TestCase):
 
         cr = Circuit(elements)
 
-        E_symplectic = np.array([[ 0., -1.,  0.,  0.,  0.],
-                                 [ 1.,  0.,  0.,  0.,  0.],
+        E_symplectic = np.array([[ 0.,  1.,  0.,  0.,  0.],
+                                 [-1.,  0.,  0.,  0.,  0.],
                                  [ 0.,  0.,  0.,  0.,  0.],
                                  [ 0.,  0.,  0.,  0.,  0.],
                                  [ 0.,  0.,  0.,  0.,  0.]])
         
         self.assertTrue(np.allclose(cr.E_symplectic, E_symplectic))
+
+class Test_Hamiltonian_function(unittest.TestCase):
+
+    def test_Total_energy_2B(self):
+
+        C = Capacitor(value = 1, unit='GHz')
+        L = Inductor(value = 1, unit = 'GHz')
+        elements = [(0,2,C), (0,1,L), (1,2,L)] 
+
+        cr = Circuit(elements)
+
+        Total_energy_2B = np.array([[1., 0., 0., 0., 0., 0.],
+                                    [0., 0., 0., 0., 0., 0.],
+                                    [0., 0., 0., 0., 0., 0.],
+                                    [0., 0., 0., 0., 0., 0.],
+                                    [0., 0., 0., 0., 1., 0.],
+                                    [0., 0., 0., 0., 0., 1.]])
+        
+        self.assertTrue(np.allclose(cr.Total_energy_2B, Total_energy_2B))
+
+    def test_Total_energy_symplectic_basis(self):
+
+        C = Capacitor(value = 1, unit='GHz')
+        L = Inductor(value = 1, unit = 'GHz')
+        elements = [(0,2,C), (0,1,L), (1,2,L)] 
+
+        cr = Circuit(elements)
+
+        Total_energy_symplectic_basis = np.array([[1., 0., 0.],
+                                                  [0., 1., 1.],
+                                                  [0., 1., 2.]])
+        
+        self.assertTrue(np.allclose(cr.Total_energy_symplectic_basis, Total_energy_symplectic_basis))
+
+    def test_hamiltonian(self):
+
+        C = Capacitor(value = 1, unit='GHz')
+        L = Inductor(value = 1, unit = 'GHz')
+        elements = [(0,2,C), (0,1,L), (1,2,L)] 
+
+        cr = Circuit(elements)
+
+        hamiltonian = np.array([[1.,  0.],
+                                [0., 0.5]])
+        
+        self.assertTrue(np.allclose(cr.hamiltonian, hamiltonian))
+
+
+
+
 
 
 

@@ -151,7 +151,7 @@ def symplectic_form(A: Matrix, tol: float = 1e-16) -> tuple[Matrix, Matrix]:
                 if first_nonzero_index(x) < first_nonzero_index(y):
                     ordered_pairs.append((b, x / np.sqrt(b * 0.5), y / np.sqrt(b * 0.5)))
                 elif first_nonzero_index(y) < first_nonzero_index(x):
-                    ordered_pairs.append((b, y / np.sqrt(b * 0.5), x / np.sqrt(b * 0.5)))
+                    ordered_pairs.append((b, -y / np.sqrt(b * 0.5), x / np.sqrt(b * 0.5)))
 
     assert len(pairs) == len(ordered_pairs), "There is an error in the construction of the 'ordered_pairs' array"
 
@@ -160,14 +160,12 @@ def symplectic_form(A: Matrix, tol: float = 1e-16) -> tuple[Matrix, Matrix]:
 
     # Construct the symplectic matrix, J, for the matrix A.
     dimension = A.shape[0]
-    number_of_pairs = len(pairs)
-    J_abs = np.zeros((dimension, dimension))
+    number_of_pairs = len(ordered_pairs)
+    J = np.zeros((dimension, dimension))
     I = np.eye(number_of_pairs)
     
-    J_abs[:number_of_pairs, number_of_pairs:number_of_pairs*2] = I
-    J_abs[number_of_pairs:number_of_pairs*2, :number_of_pairs] = I
-
-    J = J_abs * np.sign(V.T @ A @ V)
+    J[:number_of_pairs, number_of_pairs:number_of_pairs*2] = I
+    J[number_of_pairs:number_of_pairs*2, :number_of_pairs] = -I
 
     assert np.allclose(J, (V.T @ A @ V)), "There is an error in the construction of the symplectic matrix"
 

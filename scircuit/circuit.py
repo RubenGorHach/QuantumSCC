@@ -137,17 +137,6 @@ class Circuit:
         # Calculate the total energy function matrix after the change of variable given by the symplectic form of omega
         Total_energy_symplectic_basis = self.symplectic_basis_change.T @ Total_energy_after_Kirchhoff @ self.symplectic_basis_change
 
-        # Remove from the previous matrix the rows and columns that correspond to variables without dynamics
-        number_rows, _ = Total_energy_symplectic_basis.shape
-        rows_columns_to_delete = []
-
-        for i in range(2*self.number_of_pairs, number_rows):
-            if np.all(np.abs(Total_energy_symplectic_basis[i,:]) <= 1e-12) and np.all(np.abs(Total_energy_symplectic_basis[:,i]) <= 1e-12):
-                rows_columns_to_delete.append(i)
-        
-        Total_energy_symplectic_basis = np.delete(Total_energy_symplectic_basis, rows_columns_to_delete, axis=0)
-        Total_energy_symplectic_basis = np.delete(Total_energy_symplectic_basis, rows_columns_to_delete, axis=1)
-
         # If the size of the new Total_energy_symplectic_basis matrix is equal to 2*self.number_of_pairs, this matrix is the Hamiltonian
         if len(Total_energy_symplectic_basis) == 2*self.number_of_pairs:
             hamiltonian = Total_energy_symplectic_basis
@@ -165,13 +154,12 @@ class Circuit:
         assert np.allclose(TEF_12, TEF_21.T) == True, "There is an error in the decomposition of the total energy function matrix in blocks"
 
         # Verify that the equation dH/dw = 0 has a solution by testing that TEF_22 has a inverse form
-        rank_TEF_22 = np.linalg.matrix_rank(TEF_22)
-        rows_TEF_22, columns_TEF_22 = TEF_22.shape
-
-        if rank_TEF_22 < min(rows_TEF_22, columns_TEF_22):
+        try: 
+            TEF_22_inv = np.linalg.pinv(TEF_22, rcond = 10^-15)
+        except np.linalg.LinAlgError:
             raise ValueError("There is no solution for the equation dH/dw = 0. The circuit does not present Hamiltonian dynamics.")
 
         # If there is solution, calculate the final matrix expression for the total energy function, which is the Hamiltonian
-        hamiltonian = TEF_11 - TEF_12 @ np.linalg.inv(TEF_22) @ TEF_21
+        hamiltonian = TEF_11 - TEF_12 @ TEF_22_inv @ TEF_21
 
         return Total_energy_2B, Total_energy_symplectic_basis, hamiltonian
