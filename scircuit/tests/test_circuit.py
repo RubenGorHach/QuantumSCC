@@ -76,7 +76,7 @@ class Test_omega_function(unittest.TestCase):
 
         cr = Circuit(elements)
 
-        E_2B = np.array([[ 0.,   0.,   0.,   0.,   0.,   0.5,  0.,   0.,   0.,   0. ],
+        omega_2B = np.array([[ 0.,   0.,   0.,   0.,   0.,   0.5,  0.,   0.,   0.,   0. ],
                          [ 0.,   0.,   0.,   0.,   0.,   0.,  -0.5,  0.,   0.,   0. ],
                          [ 0.,   0.,   0.,   0.,   0.,   0.,   0.,  -0.5,  0.,   0. ],
                          [ 0.,   0.,   0.,   0.,   0.,   0.,   0.,   0.,  -0.5,  0. ],
@@ -87,7 +87,7 @@ class Test_omega_function(unittest.TestCase):
                          [ 0.,   0.,   0.,   0.5,  0.,   0.,   0.,   0.,   0.,   0. ],
                          [ 0.,   0.,   0.,   0.,   0.5,  0.,   0.,   0.,   0.,   0. ]])
         
-        self.assertTrue(np.allclose(cr.E_2B, E_2B))
+        self.assertTrue(np.allclose(cr.omega_2B, omega_2B))
 
     def test_omega_symplectic(self):
 
@@ -97,13 +97,10 @@ class Test_omega_function(unittest.TestCase):
 
         cr = Circuit(elements)
 
-        E_symplectic = np.array([[ 0.,  1.,  0.,  0.,  0.],
-                                 [-1.,  0.,  0.,  0.,  0.],
-                                 [ 0.,  0.,  0.,  0.,  0.],
-                                 [ 0.,  0.,  0.,  0.,  0.],
-                                 [ 0.,  0.,  0.,  0.,  0.]])
+        omega_symplectic = np.array([[ 0.,  1.],
+                                     [-1.,  0.]])
         
-        self.assertTrue(np.allclose(cr.E_symplectic, E_symplectic))
+        self.assertTrue(np.allclose(cr.omega_symplectic, omega_symplectic))
 
 class Test_Hamiltonian_function(unittest.TestCase):
 

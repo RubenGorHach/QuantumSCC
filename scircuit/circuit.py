@@ -49,9 +49,9 @@ class Circuit:
 
         self.Fcut, self.Floop, self.F, self.K = self.Kirchhoff()
 
-        self.E_2B, self.E_symplectic, self.symplectic_basis_change, self.number_of_pairs = self.omega_function()
+        self.omega_2B, self.omega_symplectic, self.symplectic_basis_change, self.number_of_pairs = self.omega_function()
 
-        self.Total_energy_2B, self.Total_energy_symplectic_basis, self.hamiltonian = self.hamiltonian_function_lineal_elements()
+        self.Total_energy_2B, self.Total_energy_symplectic_basis, self.hamiltonian = self.hamiltonian_function_quadratic()
 
     def Kirchhoff(self):
         # Calculate the full Fcut
@@ -98,26 +98,29 @@ class Circuit:
         return Fcut, Floop, F, K
 
     def omega_function(self):
-        # Obtain E_2B matrix
-        E_2B = np.zeros((2 * self.no_elements, 2 * self.no_elements))
+        # Obtain omega_2B matrix
+        omega_2B = np.zeros((2 * self.no_elements, 2 * self.no_elements))
         for i, elem in enumerate(self.elements):
             if isinstance(elem[2], Capacitor) == True:
-                E_2B[i, i + self.no_elements] = 0.5
-                E_2B[i + self.no_elements, i] = -0.5
+                omega_2B[i, i + self.no_elements] = 0.5
+                omega_2B[i + self.no_elements, i] = -0.5
 
             if isinstance(elem[2], Inductor) == True:
-                E_2B[i, i + self.no_elements] = -0.5
-                E_2B[i + self.no_elements, i] = 0.5
+                omega_2B[i, i + self.no_elements] = -0.5
+                omega_2B[i + self.no_elements, i] = 0.5
 
-        # Obtain omega matrix, E, in its non symplectic form
-        E_non_symplectic = self.K.T @ E_2B @ self.K
+        # Obtain omega matrix in its non symplectic form
+        omega_non_symplectic = self.K.T @ omega_2B @ self.K
 
-        # Obtain the symplectic form of the omega matrix, E, and the basis change matrix
-        E_symplectic, symplectic_basis_change, number_of_pairs = symplectic_form(E_non_symplectic)
+        # Obtain the symplectic form of the omega matrix and the basis change matrix
+        omega_symplectic, symplectic_basis_change, number_of_pairs = symplectic_form(omega_non_symplectic)
 
-        return E_2B, E_symplectic, symplectic_basis_change, number_of_pairs
+        # Remove the zeros columns and rows from omega_symplectic
+        omega_symplectic = omega_symplectic[:2 * number_of_pairs, :2 * number_of_pairs]
 
-    def hamiltonian_function_lineal_elements(self):
+        return omega_2B, omega_symplectic, symplectic_basis_change, number_of_pairs
+
+    def hamiltonian_function_quadratic(self):
         # IMPORTANT -> This is the fuction that calculates the Hamiltonian for the lineal elements of the circuit, and considering circuits with only linear elements
 
         # Calculate the initial total energy function matrix (prior to the change of variable given by the Kirchhoff's equtions)
@@ -153,9 +156,12 @@ class Circuit:
 
         assert np.allclose(TEF_12, TEF_21.T) == True, "There is an error in the decomposition of the total energy function matrix in blocks"
 
+        # Make 0 the values of TEF_22 that are lower than the tolerance to avoid problems with the pseudo-inverse
+        TEF_22[np.abs(TEF_22) < 1e-15] = 0
+
         # Verify that the equation dH/dw = 0 has a solution by testing that TEF_22 has a inverse form
         try: 
-            TEF_22_inv = np.linalg.pinv(TEF_22, rcond = 10^-15)
+            TEF_22_inv = np.linalg.pinv(TEF_22, rcond = 1e-15)
         except np.linalg.LinAlgError:
             raise ValueError("There is no solution for the equation dH/dw = 0. The circuit does not present Hamiltonian dynamics.")
 
@@ -163,3 +169,9 @@ class Circuit:
         hamiltonian = TEF_11 - TEF_12 @ TEF_22_inv @ TEF_21
 
         return Total_energy_2B, Total_energy_symplectic_basis, hamiltonian
+    
+
+    def hamiltonian_canonical_transformation(self):
+
+        # Define the Hamiltonian (H) and the symplectic matrix (J)
+        H = self.hamiltonian
