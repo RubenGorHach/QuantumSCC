@@ -70,11 +70,38 @@ def remove_zero_rows(M, tol=1e-16):
     M = M[(row_norm_1 > tol), :]
     return M
 
+def pseudo_inv(M, tol=1e-15):
+    """
+    Compute the (Moore-Penrose) pseudo-inverse of a matrix.
+
+    Calculate the generalized inverse of a matrix using its
+    singular-value decomposition (SVD) and considering a total
+    tolerance below which each singular value is considered zero.
+
+    Parameters
+    ----------
+        M:
+            Input matrix 
+        tol:
+            Tolerance below which the element is considered zero. By default, it is 1e-15.
+    """
+    # SVD decomposition
+    U, S, Vt = np.linalg.svd(M)
+    
+    # Invert the singular values taking into account the tolerance
+    S_inv = np.zeros((Vt.shape[0], U.shape[1]))  # Preallocate S_inv matrix with correct dimensions
+    for i in range(len(S)):
+        if S[i] > tol:  # Invert only if the singular value is bigger than the tolerance
+            S_inv[i, i] = 1 / S[i]
+    
+    # Get the pseudo-inverse
+    pseudo_inv = Vt.T @ S_inv @ U.T
+    return pseudo_inv
+
 
 def first_nonzero_index(v, tol=1e-14):
     """
-    It returns the index of the firs non-zero element in the vector v
-    Retorna el índice del primer elemento no nulo en el vector v, con una tolerancia.
+    It returns the index of the firs non-zero element in the vector v, with a tolerance.
 
     Parameters
     ----------
@@ -87,7 +114,6 @@ def first_nonzero_index(v, tol=1e-14):
         if abs(val) > tol:  
             return i
     return None  # If there are no non-zero elements, it returns None
-
 
 Matrix = np.ndarray
 
@@ -181,7 +207,7 @@ def canonical_transformation_quadratic_hamiltonian(H, tol=1e-15):
         H:
             Quadratic Hamiltonian matrix to which the algorithm is applied.
         tol:
-            Tolerance below which the element is considered zero. By default, it is 1e-16.
+            Tolerance below which the element is considered zero. By default, it is 1e-15.
     """
 
     # Assert that the input Hamiltonian is a square matrix
@@ -190,7 +216,7 @@ def canonical_transformation_quadratic_hamiltonian(H, tol=1e-15):
 
     # Define the symplectic matrix J with the correct dimensions
     dimension = H.shape[0]
-    half_dimension = int(dimension/2)
+    half_dimension = dimension//2
     J = np.zeros((dimension, dimension))
     I = np.eye(half_dimension)
     
@@ -205,164 +231,110 @@ def canonical_transformation_quadratic_hamiltonian(H, tol=1e-15):
     K_eigenval, K_eigenvec = np.linalg.eig(K)
     assert np.linalg.matrix_rank(K_eigenvec, tol=1e-15) == dimension, "There are degenerate eigenvalues -> I fail my assumption and the program is not ready"
 
-    zero_eigenval, zero_eigenvec = np.empty(0), np.empty((dimension, 0)) # There should not appear zero eigenvalues
-    real_eigenval, real_eigenvec = np.empty(0), np.empty((dimension, 0))
-    purely_imag_eigenval, purely_imag_eigenvec = np.empty(0), np.empty((dimension, 0))
-    complex_eigenval, complex_eigenvec = np.empty(0), np.empty((dimension, 0))
+    zero_eigenval, zero_eigenvec = np.empty(0), np.empty((dimension, 0))
+    imag_eigenval, imag_eigenvec = np.empty(0), np.empty((dimension, 0))
     
-    # Organize the eigenvalues with their eigenvectors in four categories
+    # Organize the eigenvalues with their eigenvectors in two groups: zero and pure imaginary eigenvalues
     for i, eigenval in enumerate(K_eigenval):
 
-        if np.allclose(eigenval.real, 0) and np.allclose(eigenval.imag, 0): # There should not appear zero eigenvalues
+        if np.allclose(eigenval.real, 0) and np.allclose(eigenval.imag, 0): 
             zero_eigenval = np.hstack((zero_eigenval, eigenval))
             zero_eigenvec = np.hstack((zero_eigenvec, K_eigenvec[:,i].reshape(-1,1)))
 
-        elif np.allclose(eigenval.imag, 0):
-            real_eigenval = np.hstack((real_eigenval, eigenval))
-            real_eigenvec = np.hstack((real_eigenvec, K_eigenvec[:,i].reshape(-1,1)))
+        elif np.allclose(eigenval.real, 0) and eigenval.imag > 0:
+            imag_eigenval = np.hstack((imag_eigenval, eigenval)) # Positive eigenvalue
+            imag_eigenvec = np.hstack((imag_eigenvec, K_eigenvec[:,i].reshape(-1,1))) # Eigenvector of the positive eigenvalue
 
-        elif np.allclose(eigenval.real, 0):
-            purely_imag_eigenval = np.hstack((purely_imag_eigenval, eigenval))
-            purely_imag_eigenvec = np.hstack((purely_imag_eigenvec, K_eigenvec[:,i].reshape(-1,1)))
-        
-        else:
-            complex_eigenval = np.hstack((complex_eigenval, eigenval))
-            complex_eigenvec = np.hstack((complex_eigenvec, K_eigenvec[:,i].reshape(-1,1)))
+    # Organize the pure imaginary positives eigenvalues from smallest to largest
+    imag_index = np.argsort(imag_eigenval.imag)
+    imag_eigenval = imag_eigenval[imag_index]
+    imag_eigenvec = imag_eigenvec[:, imag_index]
+
+    # Verify there are no real or non pure complex eigenvalues   
+    assert 2 * len(imag_eigenval) + len(zero_eigenval) == len(K_eigenval), "Matrix JH has positive or not pure complex eigenvalues"
     
     # Verify that there are no zero eigenvalues
-    assert len(zero_eigenval) == 0, "There are zero eigenvalues and it is not possible"
+    assert len(zero_eigenval) == 0, "There are zero eigenvalues and the code is not ready"
 
-    # Rearrange the elements in each category by grouping them in pairs of opposite sign
+    # Normalize the pure imaginary eigenvectors under the standard symplectic inner product x.T @ J @ y 
+    normalized_imag_eigenvec = np.empty((dimension, 0))
 
-    for i in range (0, len(real_eigenval), 2):
-        for j in range (i+1, len(real_eigenval)):
-            if np.allclose(np.abs(real_eigenvec[:,i]), np.abs(real_eigenvec[:,j])):
-                real_eigenval[i+1], real_eigenval[j] = real_eigenval[j], real_eigenval[i+1]
-                real_eigenvec[:, [i+1, j]] = real_eigenvec[:, [j, i+1]]
+    for i, eigenval in enumerate(imag_eigenval):
 
-    for i in range (0,len(purely_imag_eigenval), 2):
-        for j in range (i+1, len(purely_imag_eigenval)):
-            if np.allclose(np.abs(purely_imag_eigenvec[:,i]), np.abs(purely_imag_eigenvec[:,j])):
-                purely_imag_eigenval[i+1], purely_imag_eigenval[j] = purely_imag_eigenval[j], purely_imag_eigenval[i+1]
-                purely_imag_eigenvec[:, [i+1, j]] = purely_imag_eigenvec[:, [j, i+1]]
+        # Repeated eigenvalues
+        if i > 0 and np.allclose(imag_eigenval[i-1], imag_eigenval[i]):
+            j += 1 
+            summary = 0
+            for m in range(1,j+1):
+                Phi_star = np.conj(normalized_imag_eigenvec[:,i-m].T @ J @ np.conj(imag_eigenvec[:,i]))
+                summary += Phi_star * normalized_imag_eigenvec[:,i-m].reshape(-1,1) 
 
-    for i in range (0, len(complex_eigenval), 2):
-        for j in range(i+1, len(complex_eigenval)):
-            l = 1
-            if np.allclose(np.abs(complex_eigenvec[:,i]), np.abs(complex_eigenvec[:,j])):
-                complex_eigenval[i+l], complex_eigenval[j] = complex_eigenval[j], complex_eigenval[i+l]
-                complex_eigenvec[:, [i+l, j]] = complex_eigenvec[:, [j, i+l]]
-                l += 1 
-        for j in range(i+1, len(complex_eigenval)):
-            if np.allclose(complex_eigenval[i], -complex_eigenval[j]):
-                complex_eigenval[i+1], complex_eigenval[j] = complex_eigenval[j], complex_eigenval[i+1]
-                complex_eigenvec[:, [i+1, j]] = complex_eigenvec[:, [j, i+1]]
+            eigenvec = imag_eigenvec[:,i].reshape(-1,1) - sigma * summary 
+            norm = np.sqrt(eigenvec.T @ J @ np.conj(eigenvec))
+            normalized_imag_eigenvec = np.hstack((normalized_imag_eigenvec, eigenvec/norm)) 
+            continue
+        j = 0
 
+        # First eigenvalues
+        alpha = imag_eigenvec[:,i].T @ J @ np.conj(imag_eigenvec[:,i])
+        sigma = 1j * np.sign(alpha/1j)
+        Phi = np.sqrt(sigma * alpha)
+        normalized_imag_eigenvec = np.hstack((normalized_imag_eigenvec, (imag_eigenvec[:,i].reshape(-1,1))/Phi)) 
 
-    # Normalize the eigenvectors under the standard symplectic inner product x.T @ J @ y and rearrange the elements to obtain x.T @ J @ y = 1
-
-    # Real pairs 
-    for i in range (0, len(real_eigenval), 2):
-        a = np.sqrt(np.abs(real_eigenvec[:,i].T @ J @ real_eigenvec[:,i+1]))
-        real_eigenvec[:,i] = real_eigenvec[:,i]*(1/a)
-        real_eigenvec[:,i+1] = real_eigenvec[:,i+1]*(1/a)
+        # Verify the orthonormalization of the term i
+        assert np.allclose(normalized_imag_eigenvec[:,i].T @ J @ np.conj(normalized_imag_eigenvec[:,i]), 1j) \
+            or np.allclose(normalized_imag_eigenvec[:,i].T @ J @ np.conj(normalized_imag_eigenvec[:,i]), -1j), \
+            "There is an error in the orthonormalization of an eigenvector from a purely imaginary eigenvalue"
         
-        if np.allclose(real_eigenvec[:,i].T @ J @ real_eigenvec[:,i+1], -1): # Rearrange the elements to obtain x.T @ J @ y = 1
-            real_eigenval[i], real_eigenval[i+1] = real_eigenval[i+1], real_eigenval[i]
-            real_eigenvec[:, [i, i+1]] = real_eigenvec[:, [i+1, i]]
-
-        assert np.allclose(real_eigenvec[:,i].T @ J @ real_eigenvec[:,i+1], 1), "There is an error in the orthonormalization of an eigenvector from a real eigenvalue"
-
-    # Purely imaginary pairs
-    for i in range (0, len(purely_imag_eigenval), 2):
-        a = np.sqrt(np.abs(purely_imag_eigenvec[:,i].T @ J @ purely_imag_eigenvec[:,i+1]))
-        purely_imag_eigenvec[:,i] = purely_imag_eigenvec[:,i]*(1/a)
-        purely_imag_eigenvec[:,i+1] = purely_imag_eigenvec[:,i+1]*(1/a)
-
-        if np.allclose(purely_imag_eigenvec[:,i].T @ J @ purely_imag_eigenvec[:,i+1], -1j): # Rearrange the elements to obtain x.T @ J @ y = 1j
-            purely_imag_eigenval[i], purely_imag_eigenval[i+1] = purely_imag_eigenval[i+1], purely_imag_eigenval[i]
-            purely_imag_eigenvec[:, [i, i+1]] = purely_imag_eigenvec[:, [i+1, i]]
-
-        assert np.allclose(purely_imag_eigenvec[:,i].T @ J @ purely_imag_eigenvec[:,i+1], 1j), "There is an error in the orthonormalization of an eigenvector from a purely imaginary eigenvalue"
-
-    # Complex quadruplets
-    for i in range (0, len(complex_eigenval), 2):
-        a = np.sqrt(complex_eigenvec[:,i].T @ J @ complex_eigenvec[:,i+1])
-        complex_eigenvec[:,i] = complex_eigenvec[:,i]*(1/a)
-        complex_eigenvec[:,i+1] = complex_eigenvec[:,i+1]*(1/a)
-        
-        if np.allclose(complex_eigenvec[:,i].T @ J @ complex_eigenvec[:,i+1], -1): # Rearrange the elements to obtain x.T @ J @ y = 1
-            complex_eigenval[i], complex_eigenval[i+1] = complex_eigenval[i+1], complex_eigenval[i]
-            complex_eigenvec[:, [i, i+1]] = complex_eigenvec[:, [i+1, i]]
-
-        assert np.allclose(complex_eigenvec[:,i].T @ J @ complex_eigenvec[:,i+1], 1), "There is an error in the orthonormalization of an eigenvector from a complex eigenvalue"
-    
-
     # Construct the normal form transfromation matrix T such that H_normal = T.T @ H @ T
     T_plus = np.empty((dimension, 0))
     T_minus = np.empty((dimension, 0))
     T = np.empty((dimension, 0))
 
-    # Real pairs, c = 1
-    for i in range(len(real_eigenval)):
-        if i % 2 == 0:
-            T_plus = np.hstack((T_plus, real_eigenvec[:,i].reshape(-1,1)))
-        if i % 2 == 1:
-            T_minus = np.hstack((T_minus, real_eigenvec[:,i].reshape(-1,1)))
-
-    # Complex quadruplets, c = 2
-    for i in range(len(complex_eigenval)):
-
-        if i % 4 == 0:
-            T_plus = np.hstack((T_plus, np.sqrt(2)*(complex_eigenvec[:,i].real).reshape(-1,1)))
-        if i % 4 == 2:
-            T_plus = np.hstack((T_plus, np.sqrt(2)*(complex_eigenvec[:,i].imag).reshape(-1,1)))
-
-        if i % 4 == 1:
-            T_minus = np.hstack((T_minus, np.sqrt(2)*(complex_eigenvec[:,i].real).reshape(-1,1)))
-        if i % 4 == 3:
-            T_minus = np.hstack((T_minus, (-1)*np.sqrt(2)*(complex_eigenvec[:,i].imag).reshape(-1,1)))
-
     # Purely imaginary pairs, c = 6
-    sigma = 1j # x.T @ J @ y = sigma = 1j
-    for i in range(len(purely_imag_eigenval)):
-        if i % 2 == 0:
-            T_plus = np.hstack((T_plus, np.sqrt(2)*(purely_imag_eigenvec[:,i].real).reshape(-1,1)))
-        if i % 2 == 1:
-            T_minus = np.hstack((T_minus, np.sqrt(2)*((np.conjugate(purely_imag_eigenvec[:,i]*(-sigma))).real).reshape(-1,1)))
+    for i, _ in enumerate(imag_eigenval):
+        sigma = 1j * np.sign((imag_eigenvec[:,i].T @ J @ np.conj(imag_eigenvec[:,i]))/1j)
+
+        T_plus = np.hstack((T_plus, np.sqrt(2)*(normalized_imag_eigenvec[:,i].real).reshape(-1,1)))
+        T_minus = np.hstack((T_minus, np.sqrt(2)*((np.conjugate(normalized_imag_eigenvec[:,i]*(sigma))).real).reshape(-1,1)))
 
     # Create the total matrix T
     T  = np.hstack((T, T_plus))
     T  = np.hstack((T, T_minus))
-    assert T.shape[0] == T.shape[1], "There is an error in the construction of the normal form transfromation matrix T. It must be square"
-    assert T.shape[0] == dimension, "There is an error in the construction of the normal form transfromation matrix T. It must have the same dimension as the Hamiltonian"
-    assert np.allclose(J, T.T @ J @ T), "There is an error in the construction of the normal form transfromation matrix T. It must satisfy T.T @ J @ T = J"
-    assert np.allclose(T.imag, 0), "There is an error in the construction of the normal form transfromation matrix T. It must be real"
     
+    assert T.shape[0] == dimension, "There is an error in the construction of the normal form transfromation matrix T. \
+        It must have the same dimension as the Hamiltonian"
+    assert np.allclose(J, T.T @ J @ T), "There is an error in the construction of the normal form transfromation matrix T. \
+        It must satisfy T.T @ J @ T = J"
+    assert np.allclose(T.imag, 0), "There is an error in the construction of the normal form transfromation matrix T. It must be real"
 
-    # Calculate the Hamiltonian matrix in its normalm form, H_n
+    # Calculate the Hamiltonian matrix in its normal form, H_n
     H_n = T.T @ H @ T
 
-    # Prints for testing
-    print("The initial Hmailtonian:")
-    print(H)
-    print("The normal Hmailtonian:")
-    print(H_n)
+    return H_n, T
 
-    print("The normal form transfromation matrix T:")
-    print(T)
-
-    print("The eigenvalues of K")
-    print(purely_imag_eigenval)
+   
+   
     
-    print("The product T.T @ J @ T, that must be J:")
-    print(T.T @ J @ T)
 
- 
-
-  
 
     
+
+    
+
+        
+
+
+
+
+
+
+
+
+    
+   
+
+   
         
         
     
