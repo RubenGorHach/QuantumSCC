@@ -92,8 +92,8 @@ class Circuit:
         )
 
         # Make sure K is correct
-        assert K.shape[1] == F.shape[1] - np.linalg.matrix_rank(K)
-        assert np.allclose(F @ K, np.zeros((F.shape[0], K.shape[1]))) == True
+        assert K.shape[1] == F.shape[1] - np.linalg.matrix_rank(K), "There is an error in the construction of the Kernell"
+        assert np.allclose(F @ K, np.zeros((F.shape[0], K.shape[1]))) == True, "There is an error in the construction of the Kernell"
 
         return Fcut, Floop, F, K
 
@@ -156,12 +156,9 @@ class Circuit:
 
         assert np.allclose(TEF_12, TEF_21.T) == True, "There is an error in the decomposition of the total energy function matrix in blocks"
 
-        # Make 0 the values of TEF_22 that are lower than the tolerance to avoid problems with the pseudo-inverse
-        TEF_22[np.abs(TEF_22) < 1e-15] = 0
-
         # Verify that the equation dH/dw = 0 has a solution by testing that TEF_22 has a inverse form
         try: 
-            TEF_22_inv = np.linalg.pinv(TEF_22, rcond = 1e-15)
+            TEF_22_inv = pseudo_inv(TEF_22, tol = 1e-15)
         except np.linalg.LinAlgError:
             raise ValueError("There is no solution for the equation dH/dw = 0. The circuit does not present Hamiltonian dynamics.")
 
@@ -171,7 +168,16 @@ class Circuit:
         return Total_energy_2B, Total_energy_symplectic_basis, hamiltonian
     
 
-    def hamiltonian_canonical_transformation(self):
+    def hamiltonian_quantization(self):
 
-        # Define the Hamiltonian (H) and the symplectic matrix (J)
-        H = self.hamiltonian
+        # Define the classical Hamiltonian
+        classical_H = self.hamiltonian
+
+        # Get the quantum canonical Hamiltonian and the basis change matrix
+        canonical_H, T = canonical_transformation_quadratic_hamiltonian(classical_H)
+
+        # Proceed with the second quantization of the Hamiltonian
+
+        
+
+        
