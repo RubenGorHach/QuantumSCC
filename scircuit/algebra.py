@@ -11,8 +11,15 @@ def GaussJordan(M):
 
     Parameters
     ----------
-        M:
+        M:  
             Matrix to which the algorithm is applied.
+
+    Returns
+    ----------
+        M:  
+            Upper triangular form of the input matrix once the algorithm has been applied.
+        order:  
+            Variable order of the new upper diagonal matrix.
     """
     
     nrows, ncolumns = M.shape
@@ -37,8 +44,13 @@ def reverseGaussJordan(M):
 
     Parameters
     ----------
-        M:
+        M:  
             Upper triangular matrix to which the algorithm is applied.
+
+    Returns
+    ----------
+        M:  
+            Diagonal form of the input matrix once the algorithm has been applied.
     """
 
     if False:
@@ -60,10 +72,15 @@ def remove_zero_rows(M, tol=1e-16):
 
     Parameters
     ----------
-        M:
+        M:  
             Matrix to which the algorithm is applied.
-        tol:
-            Tolerance below which the element is considered zero. By default, it is 1e-16.
+        tol:    
+            Tolerance below which a element is considered zero. By default, it is 1e-16.
+
+    Returns
+    ----------
+        M:  
+            Input matrix with no zero rows.
     """
 
     row_norm_1 = np.sum(np.abs(M), -1)
@@ -84,6 +101,11 @@ def pseudo_inv(M, tol=1e-15):
             Input matrix 
         tol:
             Tolerance below which the element is considered zero. By default, it is 1e-15.
+
+    Returns
+    ----------
+        pseudo_inv:  
+            Moore-Penrose pseudo-inverse matrix of input matrix.
     """
     # SVD decomposition
     U, S, Vt = np.linalg.svd(M)
@@ -101,14 +123,19 @@ def pseudo_inv(M, tol=1e-15):
 
 def first_nonzero_index(v, tol=1e-14):
     """
-    It returns the index of the firs non-zero element in the vector v, with a tolerance.
+    It returns the index of the first non-zero element in the vector v, with a tolerance.
 
     Parameters
     ----------
         v:
             Vector from which we want the first non-zero index.
         tol:
-            Tolerance below which the element is considered zero. By default, it is 1e-16.
+            Tolerance below which the element is considered zero. By default, it is 1e-14.
+
+    Returns
+    ----------
+        i:  
+            Index of the first non-zero element in the input vector v.
     """
     for i, val in enumerate(v):
         if abs(val) > tol:  
@@ -127,6 +154,15 @@ def symplectic_form(A: Matrix, tol: float = 1e-16) -> tuple[Matrix, Matrix]:
             Antisymmetric matrix to which the algorithm is applied.
         tol:
             Tolerance below which the element is considered zero. By default, it is 1e-16.
+
+    Returns
+    ----------
+        J:  
+            Symplectic matrix of the input matrix space.
+        V:
+            Basis change matrix that transforms the input matrix A into the symplectic matrix J.
+        number_of_pairs:
+            Number of pairs of non-zero conjugate eigenvalues the input matrix A has.   
     """
 
     assert np.allclose(A, - A.T) == True, "The input matrix must be antisymmetric"
@@ -198,16 +234,21 @@ def symplectic_form(A: Matrix, tol: float = 1e-16) -> tuple[Matrix, Matrix]:
     return J, V, number_of_pairs
 
 
-def canonical_transformation_quadratic_hamiltonian(H, tol=1e-15):
+def canonical_transformation_quadratic_quantum_hamiltonian(H):
     """
-    Produce the canonical form of a quadratic Hamiltonian
+    Produce the canonical form of a quadratic Hamiltonian and the basis change matrix.
     
     Parameters
     ----------
         H:
-            Quadratic Hamiltonian matrix to which the algorithm is applied.
-        tol:
-            Tolerance below which the element is considered zero. By default, it is 1e-15.
+            Quadratic classical Hamiltonian matrix from which we want to obtain its quantum normal form.
+
+    Returns
+    ----------
+        H_n:  
+            Quantum normal form of the input Hamiltonian.
+        T:
+            Basis change matrix that transforms the input Hamiltonian matrix into its normal form.
     """
 
     # Assert that the input Hamiltonian is a square matrix
@@ -229,12 +270,14 @@ def canonical_transformation_quadratic_hamiltonian(H, tol=1e-15):
 
     # Obtain the eigenvalues and eigenvectors of K
     K_eigenval, K_eigenvec = np.linalg.eig(K)
-    assert np.linalg.matrix_rank(K_eigenvec, tol=1e-15) == dimension, "There are degenerate eigenvalues -> I fail my assumption and the program is not ready"
-
-    zero_eigenval, zero_eigenvec = np.empty(0), np.empty((dimension, 0))
-    imag_eigenval, imag_eigenvec = np.empty(0), np.empty((dimension, 0))
+    
+    assert np.linalg.matrix_rank(K_eigenvec, tol=1e-15) == dimension, "There are degenerate eigenvalues with geometric \
+          multiplicity < algebraic multiplicity -> I fail my assumption and the program is not ready."
     
     # Organize the eigenvalues with their eigenvectors in two groups: zero and pure imaginary eigenvalues
+    zero_eigenval, zero_eigenvec = np.empty(0), np.empty((dimension, 0))
+    imag_eigenval, imag_eigenvec = np.empty(0), np.empty((dimension, 0))
+
     for i, eigenval in enumerate(K_eigenval):
 
         if np.allclose(eigenval.real, 0) and np.allclose(eigenval.imag, 0): 
@@ -245,16 +288,48 @@ def canonical_transformation_quadratic_hamiltonian(H, tol=1e-15):
             imag_eigenval = np.hstack((imag_eigenval, eigenval)) # Positive eigenvalue
             imag_eigenvec = np.hstack((imag_eigenvec, K_eigenvec[:,i].reshape(-1,1))) # Eigenvector of the positive eigenvalue
 
-    # Organize the pure imaginary positives eigenvalues from smallest to largest
+    # Organize the positive pure imaginary eigenvalues from smallest to largest
     imag_index = np.argsort(imag_eigenval.imag)
     imag_eigenval = imag_eigenval[imag_index]
     imag_eigenvec = imag_eigenvec[:, imag_index]
 
+    # Construct a new set of eigenvectors that do not mix charge and flux variables
+    good_imag_eigenvec = np.empty((dimension, 0))
+
+    for i, eigenval in enumerate(imag_eigenval):
+        aux1 = 0.5 * (imag_eigenvec[:,i] + np.conj(imag_eigenvec[:,i]))
+        aux2 = 0.5 * (imag_eigenvec[:,i] - np.conj(imag_eigenvec[:,i]))
+
+        # The previous eigenvector did not mix the variables -> We rebuild it so that the upper half is imaginary and the lower half is real.
+        if np.allclose(aux1[:half_dimension], np.zeros(half_dimension)):
+            good_eigenvec = np.block([[aux2[:half_dimension], aux1[half_dimension:]]]).reshape(-1,1)
+            good_imag_eigenvec = np.hstack((good_imag_eigenvec, good_eigenvec))
+            continue
+        elif np.allclose(aux2[:half_dimension], np.zeros(half_dimension)):
+            good_eigenvec = np.block([[1j * aux1[:half_dimension], 1j * aux2[half_dimension:]]]).reshape(-1,1)
+            good_imag_eigenvec = np.hstack((good_imag_eigenvec, good_eigenvec))
+            continue
+        
+        # The previous eigenvector mixed the variables -> We change it such that the resulting eigenvectors matrix has full rank
+        good_eigenvec = np.block([[aux2[:half_dimension], aux1[half_dimension:]]]).reshape(-1,1)
+        good_imag_eigenvec = np.hstack((good_imag_eigenvec, good_eigenvec))
+
+        sum_columns = np.sum(good_imag_eigenvec, axis=1)
+
+        if i > 0 and np.any(np.isclose(sum_columns, 0)):
+            good_imag_eigenvec = np.delete(good_imag_eigenvec, -1, axis=1)
+            good_eigenvec = np.block([[1j * aux1[:half_dimension], 1j * aux2[half_dimension:]]]).reshape(-1,1)
+            good_imag_eigenvec = np.hstack((good_imag_eigenvec, good_eigenvec))
+
+    assert np.linalg.matrix_rank(good_imag_eigenvec) == half_dimension, \
+        "There was an error in the construction of the new eigenvetors that do not mix charge and flux variables."
+    assert np.allclose(np.linalg.pinv(good_imag_eigenvec) @ K @ good_imag_eigenvec, np.linalg.pinv(imag_eigenvec) @ K @ imag_eigenvec), \
+        "There was an error in the construction of the new eigenvetors that do not mix charge and flux variables."
+
+    imag_eigenvec = good_imag_eigenvec.copy()
+
     # Verify there are no real or non pure complex eigenvalues   
-    assert 2 * len(imag_eigenval) + len(zero_eigenval) == len(K_eigenval), "Matrix JH has positive or not pure complex eigenvalues"
-    
-    # Verify that there are no zero eigenvalues
-    assert len(zero_eigenval) == 0, "There are zero eigenvalues and the code is not ready"
+    assert 2 * len(imag_eigenval) + len(zero_eigenval) == len(K_eigenval), "Matrix K = JH has positive or not pure complex eigenvalues"
 
     # Normalize the pure imaginary eigenvectors under the standard symplectic inner product x.T @ J @ y 
     normalized_imag_eigenvec = np.empty((dimension, 0))
@@ -269,8 +344,8 @@ def canonical_transformation_quadratic_hamiltonian(H, tol=1e-15):
                 Phi_star = np.conj(normalized_imag_eigenvec[:,i-m].T @ J @ np.conj(imag_eigenvec[:,i]))
                 summary += Phi_star * normalized_imag_eigenvec[:,i-m].reshape(-1,1) 
 
-            eigenvec = imag_eigenvec[:,i].reshape(-1,1) - sigma * summary 
-            norm = np.sqrt(eigenvec.T @ J @ np.conj(eigenvec))
+            eigenvec = 1j * (imag_eigenvec[:,i].reshape(-1,1) - sigma * summary)
+            norm = np.abs(np.sqrt(eigenvec.T @ J @ np.conj(eigenvec)))
             normalized_imag_eigenvec = np.hstack((normalized_imag_eigenvec, eigenvec/norm)) 
             continue
         j = 0
@@ -286,7 +361,7 @@ def canonical_transformation_quadratic_hamiltonian(H, tol=1e-15):
             or np.allclose(normalized_imag_eigenvec[:,i].T @ J @ np.conj(normalized_imag_eigenvec[:,i]), -1j), \
             "There is an error in the orthonormalization of an eigenvector from a purely imaginary eigenvalue"
         
-    # Construct the normal form transfromation matrix T such that H_normal = T.T @ H @ T
+    # Construct the symplectic basis change matrix T such that T is a block diagonal matrix and satisfies H_normal = T.T @ H @ T
     T_plus = np.empty((dimension, 0))
     T_minus = np.empty((dimension, 0))
     T = np.empty((dimension, 0))
@@ -302,11 +377,18 @@ def canonical_transformation_quadratic_hamiltonian(H, tol=1e-15):
     T  = np.hstack((T, T_plus))
     T  = np.hstack((T, T_minus))
     
+    # Verify that the matrix T satisies the conditions it must satisfy
     assert T.shape[0] == dimension, "There is an error in the construction of the normal form transfromation matrix T. \
         It must have the same dimension as the Hamiltonian"
+    
     assert np.allclose(J, T.T @ J @ T), "There is an error in the construction of the normal form transfromation matrix T. \
         It must satisfy T.T @ J @ T = J"
+    
     assert np.allclose(T.imag, 0), "There is an error in the construction of the normal form transfromation matrix T. It must be real"
+
+    assert np.allclose(T[:half_dimension, half_dimension:], np.zeros((half_dimension,half_dimension))) and \
+        np.allclose(T[half_dimension:, :half_dimension], np.zeros((half_dimension,half_dimension))), \
+        "There is an error in the construction of the normal form transfromation matrix T. It must be a block diagonal matrix"
 
     # Calculate the Hamiltonian matrix in its normal form, H_n
     H_n = T.T @ H @ T

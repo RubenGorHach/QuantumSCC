@@ -77,6 +77,58 @@ class Test_symplectic_form_function(unittest.TestCase):
 
         self.assertTrue(np.allclose(symplectic_matrix, symplectic_basis_change.T @ random_antisymmetric_matrix_by_blocks @ symplectic_basis_change))
 
+class Test_canonical_transformation_quadratic_hamiltonian(unittest.TestCase):
+
+    def test_basis_change_matrix_T_dimensions(self):
+
+        hamiltonian = np.array([[ 5.963e-01,  1.491e-01, -1.342e-16,  1.573e-17],
+                                [ 1.491e-01,  5.963e-01, -6.702e-17,  3.462e-17],
+                                [-1.342e-16, -6.702e-17,  5.963e-01, -1.491e-01],
+                                [ 1.573e-17,  3.462e-17, -1.491e-01,  5.963e-01]])
+        
+        _, T = canonical_transformation_quadratic_quantum_hamiltonian(hamiltonian)
+
+        self.assertTrue(T.shape[0] == hamiltonian.shape[0] and T.shape[1] == hamiltonian.shape[1])
+
+    def test_basis_change_matrix_T_symplectic(self):
+
+        hamiltonian = np.array([[ 5.963e-01,  1.491e-01, -1.342e-16,  1.573e-17],
+                                [ 1.491e-01,  5.963e-01, -6.702e-17,  3.462e-17],
+                                [-1.342e-16, -6.702e-17,  5.963e-01, -1.491e-01],
+                                [ 1.573e-17,  3.462e-17, -1.491e-01,  5.963e-01]])
+        
+        _, T = canonical_transformation_quadratic_quantum_hamiltonian(hamiltonian)
+        
+        J = np.block([[ np.zeros((2,2)), np.eye(2)], 
+                      [-np.eye(2), np.zeros((2,2))]])
+        
+        self.assertTrue(np.allclose(J, T.T @ J @ T))
+
+    def test_basis_change_matrix_T_real(self):
+
+        hamiltonian = np.array([[ 5.963e-01,  1.491e-01, -1.342e-16,  1.573e-17],
+                                [ 1.491e-01,  5.963e-01, -6.702e-17,  3.462e-17],
+                                [-1.342e-16, -6.702e-17,  5.963e-01, -1.491e-01],
+                                [ 1.573e-17,  3.462e-17, -1.491e-01,  5.963e-01]])
+        
+        _, T = canonical_transformation_quadratic_quantum_hamiltonian(hamiltonian)
+
+        self.assertTrue(np.allclose(T.imag, 0))
+
+    def test_basis_change_matrix_T_block_diagonal(self):
+
+        hamiltonian = np.array([[ 5.963e-01,  1.491e-01, -1.342e-16,  1.573e-17],
+                                [ 1.491e-01,  5.963e-01, -6.702e-17,  3.462e-17],
+                                [-1.342e-16, -6.702e-17,  5.963e-01, -1.491e-01],
+                                [ 1.573e-17,  3.462e-17, -1.491e-01,  5.963e-01]])
+        
+        _, T = canonical_transformation_quadratic_quantum_hamiltonian(hamiltonian)
+
+        half_dimension = T.shape[0]//2
+
+        self.assertTrue(np.allclose(T[:half_dimension, half_dimension:], np.zeros((half_dimension,half_dimension))) and \
+                        np.allclose(T[half_dimension:, :half_dimension], np.zeros((half_dimension,half_dimension))))
+
         
 
 

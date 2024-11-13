@@ -146,7 +146,7 @@ class Test_Hamiltonian_function(unittest.TestCase):
         hamiltonian = np.array([[1.,  0.],
                                 [0., 0.5]])
         
-        self.assertTrue(np.allclose(cr.hamiltonian, hamiltonian))
+        self.assertTrue(np.allclose(cr.classical_hamiltonian, hamiltonian))
 
 
 

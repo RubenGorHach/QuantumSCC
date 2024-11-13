@@ -51,16 +51,30 @@ class Circuit:
 
         self.omega_2B, self.omega_symplectic, self.symplectic_basis_change, self.number_of_pairs = self.omega_function()
 
-        self.Total_energy_2B, self.Total_energy_symplectic_basis, self.hamiltonian = self.hamiltonian_function_quadratic()
+        self.Total_energy_2B, self.Total_energy_symplectic_basis, self.classical_hamiltonian = self.quadratic_classical_hamiltonian_function()
+
+        self.quantum_hamiltonian, _ = self.hamiltonian_quantization()
 
     def Kirchhoff(self):
-        # Calculate the full Fcut
+        """
+        Contructs the total Kirchhoff matrix F of the circuit and its kernel K.
+
+        Returns
+        ----------
+        F_cut:
+            Kirchhoff matrix with respect to the Kirchhoff current law (KCL).
+        F_loop:
+            Kirchhoff matrix with respect to the Kirchhoff voltage law (KVL).
+        F:
+            Total Kirchhoff matrix.
+        K:
+            Kernel of the total Kirchhoff matrix.
+        """
+
+        # Preallocate the F_cut matrix
         Fcut = np.zeros((self.no_nodes, self.no_elements))
 
-        # This matrix accounts for the "intensity" variables. In the
-        # Kirchhoff equations, for a given node, the contribution of an
-        # intensity is negative or positive depending on whether the node
-        # is the origin or destination of this oriented element.
+        # Construct the F_cut matrix according to KCL
         for n_edge, (orig_node, dest_node, _) in enumerate(self.elements):
             Fcut[orig_node, n_edge] = -1
             Fcut[dest_node, n_edge] = +1
@@ -98,6 +112,21 @@ class Circuit:
         return Fcut, Floop, F, K
 
     def omega_function(self):
+        """
+        Given the Lagrangian of the circuit: Lagrangian = omega - energy. It calculates the symplectic form of 
+        the two-form omega and the basis change matrix.
+        
+        Returns
+        ----------
+        omega_2B:
+            Matrix expression of the two-form omega.
+        omega_symplectic:
+            Symplectic expression of the two-form omega.
+        symplectic_basis_change:
+            Basis change matrix that transform omega to its symplectic form.
+        number_of_pairs:
+            Number of pairs of non-zero conjugate eigenvalues the two-form omega has. 
+        """
         # Obtain omega_2B matrix
         omega_2B = np.zeros((2 * self.no_elements, 2 * self.no_elements))
         for i, elem in enumerate(self.elements):
@@ -109,7 +138,7 @@ class Circuit:
                 omega_2B[i, i + self.no_elements] = -0.5
                 omega_2B[i + self.no_elements, i] = 0.5
 
-        # Obtain omega matrix in its non symplectic form
+        # Obtain omega matrix in the Kirchhoff equations basis
         omega_non_symplectic = self.K.T @ omega_2B @ self.K
 
         # Obtain the symplectic form of the omega matrix and the basis change matrix
@@ -120,7 +149,20 @@ class Circuit:
 
         return omega_2B, omega_symplectic, symplectic_basis_change, number_of_pairs
 
-    def hamiltonian_function_quadratic(self):
+    def quadratic_classical_hamiltonian_function(self):
+        """
+        Given the Lagrangian of the circuit: Lagrangian = omega - energy. It constructs the symplified 
+        classical Hamiltonian matrix from the energy function of the Lagrangian.
+
+        Returns
+        ----------
+        Total_energy_2B:
+            Matrix expression of the total energy in the initial basis.
+        Total_energy_symplectic_basis:
+            Matrix expression of the total energy in the symplectic basis of omega.
+        classical_hamiltonian:
+            Matrix expression of the classical Hamiltonian of the circuit.
+        """
         # IMPORTANT -> This is the fuction that calculates the Hamiltonian for the lineal elements of the circuit, and considering circuits with only linear elements
 
         # Calculate the initial total energy function matrix (prior to the change of variable given by the Kirchhoff's equtions)
@@ -163,21 +205,44 @@ class Circuit:
             raise ValueError("There is no solution for the equation dH/dw = 0. The circuit does not present Hamiltonian dynamics.")
 
         # If there is solution, calculate the final matrix expression for the total energy function, which is the Hamiltonian
-        hamiltonian = TEF_11 - TEF_12 @ TEF_22_inv @ TEF_21
+        classical_hamiltonian = TEF_11 - TEF_12 @ TEF_22_inv @ TEF_21
 
-        return Total_energy_2B, Total_energy_symplectic_basis, hamiltonian
+        return Total_energy_2B, Total_energy_symplectic_basis, classical_hamiltonian
     
 
     def hamiltonian_quantization(self):
+        """
+        It start by calculating the quantum Hamiltonian matrix in its normal form to then calculates the quantum Hamiltonian matrix 
+        in the basis of the Ladder Operators.
+        
+        Returns
+        ----------
+        quantum_hamiltonian:
+            Matrix expression of Hamiltonian in the Ladder Operators basis.
+        G:
+            Basis change matrix that brings the Hamiltonian to the Ladder Operators basis.
+        """
 
         # Define the classical Hamiltonian
-        classical_H = self.hamiltonian
+        classical_hamiltonian = self.classical_hamiltonian
 
         # Get the quantum canonical Hamiltonian and the basis change matrix
-        canonical_H, T = canonical_transformation_quadratic_hamiltonian(classical_H)
+        canonical_hamiltonian, T = canonical_transformation_quadratic_quantum_hamiltonian(classical_hamiltonian)
 
         # Proceed with the second quantization of the Hamiltonian
+        dimension = canonical_hamiltonian.shape[0]
+        half_dimension = dimension//2
+
+        I = np.eye(half_dimension)
+        G = (1 / np.sqrt(2)) * np.block([[-1j * I, 1j * I], [I, I]])
+
+        quantum_hamiltonian = np.conj(G.T) @ canonical_hamiltonian @ G
+
+        return quantum_hamiltonian, G
+
+
+
+
 
         
-
         
