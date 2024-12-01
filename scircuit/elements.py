@@ -94,7 +94,7 @@ class Capacitor:
             cMean = self.cValue * unt.farad_list[self.unit]
         else:
             E_c = self.cValue * unt.freq_list[self.unit] * (2 * np.pi * unt.hbar)
-            cMean = unt.e**2 / 2 / E_c
+            cMean = (2*unt.e)**2 / 2 / E_c   #cMean = (2*unt.e)**2 / 2 / E_c
 
         if not random:
             return cMean
@@ -110,7 +110,7 @@ class Capacitor:
             return self.cValue * unt.freq_list[self.unit] / unt.get_unit_freq()
         else:
             c = self.cValue * unt.farad_list[self.unit]
-            return unt.e**2 / 2 / c / (2 * np.pi * unt.hbar) / unt.get_unit_freq()
+            return (2*unt.e)**2 / 2 / c / (2 * np.pi * unt.hbar) / unt.get_unit_freq()   #(2*unt.e)**2 / 2 / c / (2 * np.pi * unt.hbar) / unt.get_unit_freq()
 
 
 class VerySmallCap(Capacitor):
@@ -231,7 +231,7 @@ class Inductor:
             lMean = self.lValue * unt.henry_list[self.unit]
         else:
             E_l = self.lValue * unt.freq_list[self.unit] * (2 * np.pi * unt.hbar)
-            lMean = (unt.Phi0) ** 2 / (2 * E_l)
+            lMean = (unt.Phi0) ** 2 / (2 * E_l)  #(unt.Phi0/2/np.pi) ** 2 / (2 * E_l)
 
         if not random:
             return lMean
@@ -248,7 +248,7 @@ class Inductor:
         else:
             l = self.lValue * unt.henry_list[self.unit]
             return (
-                (unt.Phi0) ** 2
+                (unt.Phi0) ** 2  #(unt.Phi0/2/np.pi) ** 2
                 / (2 * l)
                 / (2 * np.pi * unt.hbar)
                 / unt.get_unit_freq()
