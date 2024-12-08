@@ -73,7 +73,7 @@ class Test_symplectic_form_function(unittest.TestCase):
         random_antisymmetric_matrix_by_blocks[:size,  size:] = random_block
         random_antisymmetric_matrix_by_blocks[size:, :size] = -random_block.T
 
-        symplectic_matrix, symplectic_basis_change = symplectic_transformation(random_antisymmetric_matrix_by_blocks, Omega=True, no_flux_variables=2)
+        symplectic_matrix, symplectic_basis_change = symplectic_transformation(random_antisymmetric_matrix_by_blocks, no_flux_variables=2, Omega=True)
 
         self.assertTrue(np.allclose(symplectic_matrix, symplectic_basis_change.T @ random_antisymmetric_matrix_by_blocks @ symplectic_basis_change))
 
@@ -89,7 +89,7 @@ class Test_canonical_transformation_quadratic_hamiltonian(unittest.TestCase):
         J = np.block([[ np.zeros((2,2)), np.eye(2)], 
                       [-np.eye(2), np.zeros((2,2))]])
         
-        _, T = symplectic_transformation(J @ hamiltonian)
+        _, T = symplectic_transformation(J @ hamiltonian, no_flux_variables=2)
 
         self.assertTrue(T.shape[0] == hamiltonian.shape[0] and T.shape[1] == hamiltonian.shape[1])
 
@@ -103,7 +103,7 @@ class Test_canonical_transformation_quadratic_hamiltonian(unittest.TestCase):
         J = np.block([[ np.zeros((2,2)), np.eye(2)], 
                       [-np.eye(2), np.zeros((2,2))]])
         
-        _, T = symplectic_transformation(J @ hamiltonian)
+        _, T = symplectic_transformation(J @ hamiltonian, no_flux_variables=2)
         
         self.assertTrue(np.allclose(J, T.T @ J @ T))
 
@@ -117,7 +117,7 @@ class Test_canonical_transformation_quadratic_hamiltonian(unittest.TestCase):
         J = np.block([[ np.zeros((2,2)), np.eye(2)], 
                       [-np.eye(2), np.zeros((2,2))]])
         
-        _, T = symplectic_transformation(J @ hamiltonian)
+        _, T = symplectic_transformation(J @ hamiltonian, no_flux_variables=2)
 
         self.assertTrue(np.allclose(T.imag, 0))
 
