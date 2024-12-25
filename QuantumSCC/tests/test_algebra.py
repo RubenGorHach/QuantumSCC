@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from scircuit.algebra import *
+from QuantumSCC.algebra import *
 
 class Test_Gauss_Jordan_method(unittest.TestCase):
 
@@ -50,7 +50,7 @@ class Test_symplectic_form_function(unittest.TestCase):
                                                 [ 0.,  0.,  0.,  0.],
                                                 [ 0.,  0.,  0.,  0.]])
         
-        matrix_test, _ = symplectic_transformation(matrix_before_transformation, Omega=True, no_flux_variables=2)
+        matrix_test, _ = symplectic_transformation(matrix_before_transformation, no_flux_variables=2)
         
         self.assertTrue(np.allclose(matrix_after_transformation, matrix_test))
 
@@ -61,7 +61,7 @@ class Test_symplectic_form_function(unittest.TestCase):
                                                  [ 1.,  1.,  0.,  0.],
                                                  [ 0.,  0.,  0.,  0.]])
         
-        canonical_matrix, canonical_basis_change = symplectic_transformation(matrix_before_transformation, Omega=True, no_flux_variables=2)
+        canonical_matrix, canonical_basis_change = symplectic_transformation(matrix_before_transformation, no_flux_variables=2)
 
         self.assertTrue(np.allclose(canonical_matrix, canonical_basis_change.T @ matrix_before_transformation @ canonical_basis_change))
 
@@ -73,7 +73,7 @@ class Test_symplectic_form_function(unittest.TestCase):
         random_antisymmetric_matrix_by_blocks[:size,  size:] = random_block
         random_antisymmetric_matrix_by_blocks[size:, :size] = -random_block.T
 
-        symplectic_matrix, symplectic_basis_change = symplectic_transformation(random_antisymmetric_matrix_by_blocks, no_flux_variables=2, Omega=True)
+        symplectic_matrix, symplectic_basis_change = symplectic_transformation(random_antisymmetric_matrix_by_blocks, no_flux_variables=2)
 
         self.assertTrue(np.allclose(symplectic_matrix, symplectic_basis_change.T @ random_antisymmetric_matrix_by_blocks @ symplectic_basis_change))
 

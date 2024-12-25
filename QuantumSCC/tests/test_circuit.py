@@ -2,11 +2,11 @@ import unittest
 
 import numpy as np
 
-from scircuit.circuit import (
+from QuantumSCC.circuit import (
     Circuit, 
 )
 
-from scircuit.elements import (
+from QuantumSCC.elements import (
     Capacitor, 
     Inductor
 )
@@ -20,10 +20,10 @@ class Test_Kirchhoff_matrix(unittest.TestCase):
         elements = [(0,1,C), (0,1,L), (1,2,L), (2,3,L), (3,0,L)]
 
         cr = Circuit(elements)
-
-        Fcut = np.array([[ 1.,  0.,  0.,  1., -1.],
-                         [ 0.,  1.,  0.,  0., -1.],
-                         [ 0.,  0.,  1.,  0., -1.]])
+        
+        Fcut = np.array([[ 1.,  1.,  0.,  0., -1.],
+                         [ 0.,  0.,  1.,  0., -1.],
+                         [ 0.,  0.,  0.,  1., -1.]])
         
         self.assertTrue(np.allclose(cr.Fcut, Fcut))
 
@@ -34,26 +34,10 @@ class Test_Kirchhoff_matrix(unittest.TestCase):
         elements = [(0,1,C), (0,1,L), (1,2,L), (2,3,L), (3,0,L)]
         cr = Circuit(elements)
 
-        Floop = np.array([[-1.,  0.,  0.,  1.,  0.], 
-                          [ 1.,  1.,  1.,  0.,  1.]])
+        Floop = np.array([[-1.,  1., -0., -0.,  0.],
+                          [ 1.,  0.,  1.,  1.,  1.]])
 
         self.assertTrue(np.allclose(cr.Floop, Floop))
-
-    def test_F_matrix(self):
-
-        C = Capacitor(value = 1, unit='GHz')
-        L = Inductor(value = 1, unit = 'GHz')
-        elements = [(0,1,C), (0,1,L), (1,2,L), (2,3,L), (3,0,L)]
-
-        cr = Circuit(elements)
-
-        F = np.array([[-1.,  0.,  0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.], 
-                      [ 1.,  1.,  1.,  0.,  1.,  0.,  0.,  0.,  0.,  0.], 
-                      [ 0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.,  1., -1.], 
-                      [ 0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0., -1.], 
-                      [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0., -1.]])
-        
-        self.assertTrue(np.allclose(cr.F, F))
 
     def test_Kernel(self):
         C = Capacitor(value = 1, unit='GHz')
@@ -115,7 +99,7 @@ class Test_Hamiltonian_function(unittest.TestCase):
         hamiltonian = np.array([[1.,  0.],
                                 [0.,  2.]])
         
-        self.assertTrue(np.allclose(cr.linear_quadratic_hamiltonian, hamiltonian))
+        self.assertTrue(np.allclose(cr.extended_quadratic_hamiltonian, hamiltonian))
 
 
 class Test_linear_examples(unittest.TestCase):
@@ -132,7 +116,7 @@ class Test_linear_examples(unittest.TestCase):
         omega = 1e-9/(np.sqrt(C.cValue*1e-12*L.lValue*1e-9))
         expected_hamiltonian = np.array([[omega/2/np.pi, 0], [0, omega/2/np.pi]])
 
-        self.assertTrue(np.allclose(cr.linear_quantum_hamiltonian, expected_hamiltonian))
+        self.assertTrue(np.allclose(cr.extended_quantum_hamiltonian, expected_hamiltonian))
 
     def test_2C_and1L_parallel(self):
 
@@ -146,7 +130,7 @@ class Test_linear_examples(unittest.TestCase):
         omega = 1e-9/(np.sqrt(2*C.cValue*1e-12*L.lValue*1e-9))
         expected_hamiltonian = np.array([[omega/2/np.pi, 0], [0, omega/2/np.pi]])
 
-        self.assertTrue(np.allclose(cr.linear_quantum_hamiltonian, expected_hamiltonian))
+        self.assertTrue(np.allclose(cr.extended_quantum_hamiltonian, expected_hamiltonian))
 
     def test_2C_and1L_series(self):
 
@@ -160,7 +144,7 @@ class Test_linear_examples(unittest.TestCase):
         omega = 1e-9/(np.sqrt(0.5*C.cValue*1e-12*L.lValue*1e-9))
         expected_hamiltonian = np.array([[omega/2/np.pi, 0], [0, omega/2/np.pi]])
 
-        self.assertTrue(np.allclose(cr.linear_quantum_hamiltonian, expected_hamiltonian))
+        self.assertTrue(np.allclose(cr.extended_quantum_hamiltonian, expected_hamiltonian))
     
     def test_capacitance_coupled_oscillators(self):
 
@@ -181,7 +165,7 @@ class Test_linear_examples(unittest.TestCase):
                                          [0, 0, omega1/2/np.pi, 0], 
                                          [0, 0, 0, omega2/2/np.pi]])
 
-        self.assertTrue(np.allclose(cr.linear_quantum_hamiltonian, expected_hamiltonian))
+        self.assertTrue(np.allclose(cr.extended_quantum_hamiltonian, expected_hamiltonian))
 
     def test_star_circuit(self):
 
@@ -198,7 +182,7 @@ class Test_linear_examples(unittest.TestCase):
                                          [0, 0, omega/2/np.pi, 0], 
                                          [0, 0, 0, omega/2/np.pi]])
 
-        self.assertTrue(np.allclose(cr.linear_quantum_hamiltonian, expected_hamiltonian))
+        self.assertTrue(np.allclose(cr.extended_quantum_hamiltonian, expected_hamiltonian))
 
 
 
