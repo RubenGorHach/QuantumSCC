@@ -72,13 +72,11 @@ class Circuit:
 
         self.omega_2B, self.omega_symplectic, self.V, self.no_independent_variables, self.no_final_compact_flux = self.omega_function()
 
-        self.compact_quadratic_hamiltonian, self.extended_quadratic_hamiltonian, self.interaction_quadratic_hamiltonian, self.vector_JJ = self.classical_hamiltonian_function()
+        self.quadratic_hamiltonian, self.vector_JJ = self.classical_hamiltonian_function()
 
-        self.extended_canonical_hamiltonian, self.T = self.extended_hamiltonian_quantization()
+        self.extended_quantum_hamiltonian, self.T, self.G = self.extended_hamiltonian_quantization()
 
-        self.extended_quantum_hamiltonian, self.G = self.extended_hamiltonian_second_quantization()
-
-        self.compact_hamiltonian_quantization()
+        self.FS_quadratic_hamiltonian_phiq, self.FS_basis_change_phiq, self.final_vector_JJ_phiq, self.FS_quadratic_hamiltonian_an, self.FS_basis_change_an, self.final_vector_JJ_an = self.total_hamiltonian_quantization()
 
 
     def Kirchhoff(self):
@@ -305,61 +303,13 @@ class Circuit:
             'The classical Hamiltonian matrix must be block diagonal. There could be an error in the construction of the basis change matrix V'
         
         assert np.allclose(quadratic_hamiltonian.T, quadratic_hamiltonian), "Something goes wrong. Quadratic Hamiltonian matrix must be symmetric."
-        
-        # Separate the quadratic Hamiltonian matrix into three components: compact, extended and interaction
 
-        compact_flux_indexes = np.arange(0, self.no_final_compact_flux)
-        compact_charge_indexes = np.arange(self.no_independent_variables//2, self.no_independent_variables//2 + self.no_final_compact_flux)
-        compact_indexes = np.block([compact_flux_indexes, compact_charge_indexes])
-
-        extended_flux_indexes = np.arange(self.no_final_compact_flux, self.no_independent_variables//2)
-        extended_charge_indexes = np.arange(self.no_final_compact_flux + self.no_independent_variables//2, self.no_independent_variables)
-        extended_indexes = np.block([extended_flux_indexes, extended_charge_indexes])
-
-        # Compact quadratic Hamiltonian
-        compact_quadratic_hamiltonian = quadratic_hamiltonian[np.ix_(compact_indexes, compact_indexes)]
-
-        assert np.allclose(compact_quadratic_hamiltonian[:self.no_final_compact_flux, :self.no_final_compact_flux], 0), \
+        # Ensure there are no compact fluxes in the quadratic Hamiltonian
+        assert np.allclose(quadratic_hamiltonian[:self.no_final_compact_flux, :self.no_final_compact_flux], 0), \
             "Something goes wrong. No compact fluxes should appear in the quadratic Hamiltonian."
 
-        # Extended quadratic Hamiltonian
-        extended_quadratic_hamiltonian = quadratic_hamiltonian[np.ix_(extended_indexes, extended_indexes)]
-
-        # Interaction quadratic Hamiltonian
-        interaction_quadratic_hamiltonian = quadratic_hamiltonian.copy()
-        for i in compact_indexes:
-            for j in compact_indexes:
-                interaction_quadratic_hamiltonian[i,j] = 0.
-        for i in extended_indexes:
-            for j in extended_indexes:
-                interaction_quadratic_hamiltonian[i,j] = 0.
-
-
-
-        print(f'Number of compact flux variables: {self.no_final_compact_flux}')
-        print(f'Number of variables: {self.no_independent_variables}')
-        print('-----------------------------')
-
-        print('vector_JJ:')
-        print(vector_JJ)
-        print('-----------------------------')
-
-        print('total quadratic Hamiltonian')
-        print(quadratic_hamiltonian)
-        print('-----------------------------')
-
-        print('compact quadratic hamiltonian')
-        print(compact_quadratic_hamiltonian)
-        print('-----------------------------')
-        print('extended quadratic hamiltonian')
-        print(extended_quadratic_hamiltonian)
-        print('-----------------------------')
-        print('interaction quadratic hamiltonian')
-        print(interaction_quadratic_hamiltonian)
-        print('-----------------------------')
-
         # Returns
-        return compact_quadratic_hamiltonian, extended_quadratic_hamiltonian, interaction_quadratic_hamiltonian, vector_JJ
+        return quadratic_hamiltonian, vector_JJ
     
 
     def extended_hamiltonian_quantization(self):
@@ -368,88 +318,121 @@ class Circuit:
         
         Returns
         ----------
-        extended_canonical_hamiltonian:
+        extended_quantum_hamiltonian:
             Cannical matrix expression of the extended quantum Hamiltonian.
         T:
-            Basis change matrix that brings the Hamiltonian to its quantum canonical form
-        
+            Basis change matrix that brings the Hamiltonian to its quantum canonical form.
+        G:
+            Basis change matrix that perform the second quantization of the Hamiltonian.
         """
+        
+        # Define the extended quadratic Hamiltonian
+        extended_flux_indexes = np.arange(self.no_final_compact_flux, self.no_independent_variables//2)
+        extended_charge_indexes = np.arange(self.no_final_compact_flux + self.no_independent_variables//2, self.no_independent_variables)
+        extended_indexes = np.block([extended_flux_indexes, extended_charge_indexes])
 
-        # Define the linear quadratic Hamiltonian
-        extended_quadratic_hamiltonian = self.extended_quadratic_hamiltonian
-        dimension = extended_quadratic_hamiltonian.shape[0]
-
-        #print(linear_quadratic_hamiltonian)
+        extended_quadratic_hamiltonian = self.quadratic_hamiltonian[np.ix_(extended_indexes, extended_indexes)]
+        extended_dimension = extended_quadratic_hamiltonian.shape[0]
 
         # Get the quantum canonical Hamiltonian and the basis change matrix
-        J = np.block([[np.zeros((dimension//2, dimension//2)), np.eye(dimension//2)],
-                      [-np.eye(dimension//2), np.zeros((dimension//2, dimension//2))]])
+        J = np.block([[np.zeros((extended_dimension//2, extended_dimension//2)), np.eye(extended_dimension//2)],
+                      [-np.eye(extended_dimension//2), np.zeros((extended_dimension//2, extended_dimension//2))]])
         
         dynamical_matrix = J @ extended_quadratic_hamiltonian
         _, T = symplectic_transformation(dynamical_matrix, no_flux_variables=extended_quadratic_hamiltonian.shape[0]//2)
         extended_canonical_hamiltonian = T.T @ extended_quadratic_hamiltonian @ T
 
-        return extended_canonical_hamiltonian, T
-
-
-    def extended_hamiltonian_second_quantization(self):
-        """
-        Calculates the quantum Hamiltonian in the ladder operators basis.
-        
-        Returns
-        ----------
-        extended_quantum_hamiltonian:
-            Matrix expression of the quantum Hamiltonian in the ladder operators basis.
-        G:
-            Basis change matrix that perform the second quantization of the Hamiltonian
-        """ 
-
-        # Define the canonical Hamiltonian
-        extended_canonical_hamiltonian = self.extended_canonical_hamiltonian
-
-        # Define the basis change matrix G
+        # Proceed with the second quantization: Express the quantum Hamiltonian in the ladder operators basis.
         I = np.eye(len(extended_canonical_hamiltonian)//2)
         G = (1 / np.sqrt(2)) * np.block([[I, I], [-1j * I, 1j * I]])
 
-        # Calculate the matrix expression of the Quantum Hamiltonian in the ladder operators basis.
         extended_quantum_hamiltonian = np.conj(G.T) @ extended_canonical_hamiltonian @ G
 
+        # Verify the resulting Hamiltonian in the ladder operators basis is equal to the canonical Hamiltonian
         assert np.allclose(extended_quantum_hamiltonian, extended_canonical_hamiltonian), \
         "The matrix expression for the Hamiltonian in the ladder operators basis must be the same as the canonical Hamiltonian matrix."
 
-        return extended_quantum_hamiltonian, G
+        return extended_quantum_hamiltonian, T, G
+    
 
+    def total_hamiltonian_quantization(self):
 
-    def compact_hamiltonian_quantization(self):
+        # Define the compact quadratic Hamiltonian 
+        compact_flux_indexes = np.arange(0, self.no_final_compact_flux)
+        compact_charge_indexes = np.arange(self.no_independent_variables//2, self.no_independent_variables//2 + self.no_final_compact_flux)
+        compact_indexes = np.block([compact_flux_indexes, compact_charge_indexes])
 
-        compact_quadratic_hamiltonian = self.compact_quadratic_hamiltonian
+        compact_quadratic_hamiltonian = self.quadratic_hamiltonian[np.ix_(compact_indexes, compact_indexes)]
+        compact_dimension = compact_quadratic_hamiltonian.shape[0]
+
+        # Diagonalize the compact quadratic Hamiltonian
+        eigval, eigvec = np.linalg.eig(compact_quadratic_hamiltonian)
+        sorted_indexes = np.argsort(np.abs(eigval))
+        eigval = eigval[sorted_indexes]
+        C = eigvec[:, sorted_indexes]
+
+        diagonal_compact_quadratic_hamiltonian = C.T @ compact_quadratic_hamiltonian @ C
+
+        # Define the vector of the JJ energy function
         vector_JJ = self.vector_JJ
 
-        dimension = compact_quadratic_hamiltonian.shape[0]
 
-        # If the nonlinear flux variables does not appear in the quadratic non-linear Hamiltonian -> Proceed with the charge basis
-        if np.allclose(compact_quadratic_hamiltonian[:dimension//2, :dimension//2], 0) and \
-            np.allclose(compact_quadratic_hamiltonian[:dimension//2, dimension//2:dimension], 0):
+        # Construct the full space basis change matrix for the flux-charge variables
+        total_dimension = self.quadratic_hamiltonian.shape[0]
+        T = self.T
 
-            print('Caso: 1')
+        FS_basis_change_phiq = np.zeros((total_dimension, total_dimension), dtype=complex)
 
-        # If the nonlinear flux variables appears also in the quadratic non-linear Hamiltonian -> 
-        elif np.allclose(compact_quadratic_hamiltonian[:dimension//2, dimension//2:dimension], 0):
-            print('Caso: 2')
+        FS_basis_change_phiq[:self.no_final_compact_flux, :self.no_final_compact_flux] = C[:C.shape[0]//2, :C.shape[1]//2]
+        FS_basis_change_phiq[self.no_independent_variables//2:self.no_final_compact_flux + self.no_independent_variables//2, self.no_independent_variables//2:self.no_final_compact_flux + self.no_independent_variables//2] = C[C.shape[0]//2:, C.shape[1]//2:]
+        
+        FS_basis_change_phiq[self.no_final_compact_flux:self.no_independent_variables//2, self.no_final_compact_flux:self.no_independent_variables//2] = T[:T.shape[0]//2, :T.shape[1]//2]
+        FS_basis_change_phiq[self.no_final_compact_flux:self.no_independent_variables//2, self.no_final_compact_flux + self.no_independent_variables//2:] = T[:T.shape[0]//2, T.shape[1]//2:]
+        FS_basis_change_phiq[self.no_final_compact_flux + self.no_independent_variables//2:, self.no_final_compact_flux:self.no_independent_variables//2] = T[T.shape[0]//2:, :T.shape[1]//2]
+        FS_basis_change_phiq[self.no_final_compact_flux + self.no_independent_variables//2:, self.no_final_compact_flux + self.no_independent_variables//2:] = T[T.shape[0]//2:, T.shape[1]//2:]
 
-        else:
-            print('Caso: 3')
+        # Construct the Full space almost diagonalized quadratic Hamiltonian for the flux-charge variables
+        FS_quadratic_hamiltonian_phiq = np.conj(FS_basis_change_phiq.T) @ self.quadratic_hamiltonian @ FS_basis_change_phiq
+
+        # Construct the final vector of the JJ energy function for the flux-charge variables
+        final_vector_JJ_phiq = FS_basis_change_phiq.T @ vector_JJ
+
+
+        # Construct the full space basis change matrix for the ladder operators, number-phase variables
+        TG = self.T @ self.G
+
+        FS_basis_change_an = np.zeros((total_dimension, total_dimension), dtype=complex)
+
+        FS_basis_change_an[:self.no_final_compact_flux, :self.no_final_compact_flux] = C[:C.shape[0]//2, :C.shape[1]//2]
+        FS_basis_change_an[self.no_independent_variables//2:self.no_final_compact_flux + self.no_independent_variables//2, self.no_independent_variables//2:self.no_final_compact_flux + self.no_independent_variables//2] = C[C.shape[0]//2:, C.shape[1]//2:]
+        
+        FS_basis_change_an[self.no_final_compact_flux:self.no_independent_variables//2, self.no_final_compact_flux:self.no_independent_variables//2] = TG[:TG.shape[0]//2, :TG.shape[1]//2]
+        FS_basis_change_an[self.no_final_compact_flux:self.no_independent_variables//2, self.no_final_compact_flux + self.no_independent_variables//2:] = TG[:TG.shape[0]//2, TG.shape[1]//2:]
+        FS_basis_change_an[self.no_final_compact_flux + self.no_independent_variables//2:, self.no_final_compact_flux:self.no_independent_variables//2] = TG[TG.shape[0]//2:, :TG.shape[1]//2]
+        FS_basis_change_an[self.no_final_compact_flux + self.no_independent_variables//2:, self.no_final_compact_flux + self.no_independent_variables//2:] = TG[TG.shape[0]//2:, TG.shape[1]//2:]
+
+        # Construct the Full space almost diagonalized quadratic Hamiltonian for the ladder operators, number-phase variables
+        FS_quadratic_hamiltonian_an = np.conj(FS_basis_change_an.T) @ self.quadratic_hamiltonian @ FS_basis_change_an
+
+        # Construct the final vector of the JJ energy function for the ladder operators, number-phase variables
+        final_vector_JJ_an = FS_basis_change_an.T @ vector_JJ
+
+        return FS_quadratic_hamiltonian_phiq, FS_basis_change_phiq, final_vector_JJ_phiq, FS_quadratic_hamiltonian_an, FS_basis_change_an, final_vector_JJ_an
+
+        
+
 
     #######################################################################################################
     ################################### PRINT DIAGONALIZED HAMILTONIAN ####################################
     #######################################################################################################
 
-    def circuit_description(
+
+    def diagonal_harmonic_Hamiltonian_expression(
             self, 
             precision: int = 3,
     ):
         """
-        Print out the diagonalized Hamiltonian. It includes information about the zero modes and the variable change between the initial and final operators
+        Print out the diagonalized Hamiltonian. 
 
         Parameters
         ----------
@@ -462,15 +445,103 @@ class Circuit:
         # Print the diagonalized Hamiltonian
         extended_hamiltonian = self.extended_quantum_hamiltonian.real
         print(f'Diagonalized quantum Hamiltonian:')
-        print(f'H/h (GHz) = ', end=" ")
+        print(f'H/ℏ = ', end=" ")
 
         for i in range(len(extended_hamiltonian)//2):
             if i != len(extended_hamiltonian)//2 - 1:
-                print(f'{extended_hamiltonian[i,i]:.{precision}f} (a\u2020_{i} a_{i} + 1/2) + ', end=" ")
+                print(f'{extended_hamiltonian[i,i]:.{precision}f} GHz · (a\u2020_{i+1} a_{i+1}) + ', end=" ")
             else:
-                print(f'{extended_hamiltonian[i,i]:.{precision}f} (a\u2020_{i} a_{i} + 1/2)')
+                print(f'{extended_hamiltonian[i,i]:.{precision}f} GHz · (a\u2020_{i+1} a_{i+1})')
             
         print('----------------------------------------------------------------------')
+    
+    
+
+    def Hamiltonian_expression(
+            self, 
+            precision: int = 3,
+            tol: float = 1e-14
+    ):
+        """
+        Print out the Hamiltonian. 
+
+        Parameters
+        ----------
+            precision: int
+                Precision of the printing information. By default it going to print with 3 decimals places of precision
+            tol: float
+                Tolerance below which a number is considered zero. By default, it is 1e-14.
+        """
+
+        # Define the matrices
+        quantum_quadratic_hamiltonian = self.FS_quadratic_hamiltonian_phiq.real
+        vector_JJ = self.final_vector_JJ_phiq
+
+        # Define dimensional tools
+        no_flux_variables = quantum_quadratic_hamiltonian.shape[0]//2
+        no_compact_fluxes = self.no_final_compact_flux
+        no_JJ = self.no_JJ
+
+        print('----------------------------------------------------------------------')
+
+        # Print the  Hamiltonian
+        print(f'Quantum Hamiltonian:')
+        print(f'H/ℏ (GHz) =', end=" ")
+
+        # Print the extended Hamiltonian
+        for i in range(no_compact_fluxes, no_flux_variables):
+            if np.abs(quantum_quadratic_hamiltonian[i,i]) > 1e-14:
+                print(f'+ {quantum_quadratic_hamiltonian[i,i]:.{precision}f} [(\u03C6_R{i-no_compact_fluxes+1})^2 + (Q_R{i-no_compact_fluxes+1})^2]', end=" ")
+        
+        # Print interaction Hamiltonian
+        for i in range(no_flux_variables, 2*no_flux_variables):
+            for j in range(no_flux_variables, 2*no_flux_variables):
+                if np.abs(quantum_quadratic_hamiltonian[i,j]) > 1e-14 and i > j:
+                    print(f' + {(2 * quantum_quadratic_hamiltonian[i,j]):.{precision}f} Q_R{i-no_flux_variables-no_compact_fluxes+1} Q_S{j-no_flux_variables+1}', end=" ")
+
+        # Print non-linear Hamiltonian
+        for i in range(no_compact_fluxes):
+            if np.abs(quantum_quadratic_hamiltonian[i+no_flux_variables, i+no_flux_variables]) > 1e-14:
+                print(f' + {quantum_quadratic_hamiltonian[i+no_flux_variables,i+no_flux_variables]:.{precision}f} (Q_S{i+1})^2', end=" ")
+
+        junction_energy = np.zeros(no_JJ)
+        for i, elem in enumerate(self.elements):
+            if isinstance(elem[2], Junction) == True:
+                junction = elem[2]
+                junction_energy[i] = junction.value()
+        
+        for i in range(no_JJ):
+            if i != no_JJ-1:
+                print(f' - {junction_energy[i]:.{precision}f} cos(v_{i} \u03BE)', end=" ")
+            else:
+                print(f' - {junction_energy[i]:.{precision}f} cos(v_{i} \u03BE)')
+        if no_JJ == 0:
+            print('')
+
+        print('')
+
+        np.set_printoptions(precision=precision)
+        print(f'Vectors v: {(vector_JJ.real).T}')
+        print(f'Variable vectors \u03BEᵀ: (', end=" ")
+        for i in range(2*no_flux_variables):
+            if i < no_compact_fluxes:
+                print(f'\u03C6_S{i+1}, ', end=" ")
+            elif no_compact_fluxes <= i < no_flux_variables:
+                print(f'\u03C6_R{i-no_compact_fluxes+1}, ', end=" ")
+            elif no_flux_variables <= i < no_flux_variables + no_compact_fluxes:
+                print(f'Q_S{i-no_flux_variables+1}, ', end=" ")
+            elif  no_flux_variables + no_compact_fluxes <= i < 2*no_flux_variables-1:
+                print(f'Q_R{i-no_compact_fluxes-no_flux_variables+1}, ', end=" ")
+            elif i == 2*no_flux_variables-1:
+                print(f'Q_R{i-no_compact_fluxes-no_flux_variables+1} )')
+
+        # Give the dimension of the fluxes and charges
+        print(f'IMPORTANT: Flux and Charge operators of this expression are dimensionless.')
+        print('----------------------------------------------------------------------')
+
+
+
+    
 
         
                 

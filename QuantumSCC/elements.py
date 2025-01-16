@@ -69,9 +69,8 @@ class Capacitor:
         if self.unit in unt.farad_list:
             cMean = self.cValue * unt.farad_list[self.unit]
         else:
-            E_c = self.cValue * unt.freq_list[self.unit] * (2 * np.pi * unt.hbar)
-            cMean = (2*unt.e)**2 / 2 / E_c   #cMean = (2*unt.e)**2 / 2 / E_c
-
+            E_c = self.cValue * unt.freq_list[self.unit] * (unt.hbar)   # E_c = self.cValue * unt.freq_list[self.unit] * (2 * np.pi * unt.hbar)
+            cMean = (2*unt.e)**2 / 2 / E_c 
         if not random:
             return cMean
         else:
@@ -86,7 +85,7 @@ class Capacitor:
             return self.cValue * unt.freq_list[self.unit] / unt.get_unit_freq()
         else:
             c = self.cValue * unt.farad_list[self.unit]
-            return (2*unt.e)**2 / 2 / c / (2 * np.pi * unt.hbar) / unt.get_unit_freq()   #(2*unt.e)**2 / 2 / c / (2 * np.pi * unt.hbar) / unt.get_unit_freq()
+            return (2*unt.e)**2 / 2 / c / (unt.hbar) / unt.get_unit_freq()   # (2*unt.e)**2 / 2 / c / (2 * np.pi * unt.hbar) / unt.get_unit_freq()
 
 
 class Inductor:
@@ -145,7 +144,7 @@ class Inductor:
         if self.unit in unt.henry_list:
             lMean = self.lValue * unt.henry_list[self.unit]
         else:
-            E_l = self.lValue * unt.freq_list[self.unit] * (2 * np.pi * unt.hbar)
+            E_l = self.lValue * unt.freq_list[self.unit] * (unt.hbar)  # E_l = self.lValue * unt.freq_list[self.unit] * (2 * np.pi * unt.hbar)
             lMean = (unt.Phi0/2/np.pi) ** 2 / (2 * E_l)  #(unt.Phi0) ** 2 / (2 * E_l)
 
         if not random:
@@ -165,7 +164,7 @@ class Inductor:
             return (
                 (unt.Phi0/2/np.pi) ** 2  #(unt.Phi0) ** 2
                 / (2 * l)
-                / (2 * np.pi * unt.hbar)
+                / (unt.hbar) # (2 * np.pi * unt.hbar) 
                 / unt.get_unit_freq()
             )
 
@@ -215,21 +214,13 @@ class Junction:
         else:
             self.cap = cap
 
-    def value(self, random: bool = False) -> float:
+    def value(self) -> float:
         """
-        Return the value of the Josephson Junction in angular frequency.
-        If `random` is `True`, it samples from a normal distribution with
-        variance defined by the fabrication error.
+        Return the value of the Josephson Junction in GHz.
 
-        Parameters
-        ----------
-            random:
-                A boolean flag which specifies whether the output
-                is deterministic or random.
         """
-        jMean = self.jValue * unt.freq_list[self.unit] * 2 * np.pi
+        jMean = self.jValue * unt.freq_list[self.unit]/ unt.get_unit_freq() #* 2 * np.pi
+        #jMean = self.jValue * unt.freq_list[self.unit] * 2 * np.pi
 
-        if not random:
-            return jMean
-        else:
-            return np.random.normal(jMean, jMean * self.error / 100, 1)[0]
+        return jMean
+       

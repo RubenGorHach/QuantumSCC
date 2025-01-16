@@ -459,10 +459,6 @@ def omega_symplectic_transformation(Omega: Matrix, no_compact_flux_variables: in
     return J, V, no_compact_flux_variables
 
 
-
-
-
-
 def symplectic_transformation(M: Matrix, no_flux_variables: int, tol: float = 1e-14) -> tuple[Matrix, Matrix]:
     """
     Transform a square matrix M = JH (with H a positive semidefinite matrix and J the Symplectic matrix) to eigval*J = [[0,eigval*1],[-eigval*1,0]]
@@ -571,7 +567,8 @@ def symplectic_transformation(M: Matrix, no_flux_variables: int, tol: float = 1e
 
         T_plus = np.hstack((T_plus, np.sqrt(2) * (normal_imag_eigvec[:,i].real).reshape(-1,1)))
 
-        T_minus = np.hstack((T_minus, np.sqrt(2)*((sigma * (-1) * np.conjugate(normal_imag_eigvec[:,i])).real).reshape(-1,1)))
+        #T_minus = np.hstack((T_minus, np.sqrt(2)*((sigma * (-1) * np.conjugate(normal_imag_eigvec[:,i])).real).reshape(-1,1)))
+        T_minus = np.hstack((T_minus, np.sqrt(2)*((normal_imag_eigvec[:,i]).imag).reshape(-1,1)))
 
     T = np.hstack((T, T_plus))
     T = np.hstack((T, T_minus))
