@@ -521,22 +521,30 @@ class Circuit:
         print('')
 
         np.set_printoptions(precision=precision)
-        print(f'Vectors v: {(vector_JJ.real).T}')
+        print(f'Vectors v:')
+        print(f'{(vector_JJ.real).T}')
         print(f'Variable vectors \u03BEᵀ: (', end=" ")
         for i in range(2*no_flux_variables):
             if i < no_compact_fluxes:
-                print(f'\u03C6_S{i+1}, ', end=" ")
+                print(f'\u03C6_S{i+1}', end=" ")
             elif no_compact_fluxes <= i < no_flux_variables:
-                print(f'\u03C6_R{i-no_compact_fluxes+1}, ', end=" ")
+                print(f' \u03C6_R{i-no_compact_fluxes+1}', end=" ")
             elif no_flux_variables <= i < no_flux_variables + no_compact_fluxes:
-                print(f'Q_S{i-no_flux_variables+1}, ', end=" ")
+                print(f' Q_S{i-no_flux_variables+1}', end=" ")
             elif  no_flux_variables + no_compact_fluxes <= i < 2*no_flux_variables-1:
-                print(f'Q_R{i-no_compact_fluxes-no_flux_variables+1}, ', end=" ")
+                print(f' Q_R{i-no_compact_fluxes-no_flux_variables+1}', end=" ")
             elif i == 2*no_flux_variables-1:
-                print(f'Q_R{i-no_compact_fluxes-no_flux_variables+1} )')
+                print(f' Q_R{i-no_compact_fluxes-no_flux_variables+1}', end=" ")
+        print(f')')
+        print(f'')
+
+        # Return the opological behavior of each operator
+        print(f'Subindex explanation:')
+        print(f' - Subindex R indicates that the operator belongs to the extended flux subspace')
+        print(f' - Subindex S indicates that the operator belongs to the compact flux subspace')
 
         # Give the dimension of the fluxes and charges
-        print(f'IMPORTANT: Flux and Charge operators of this expression are dimensionless.')
+        print(f'IMPORTANT: Flux and Charge operators of this expression are dimensionless (number-phase representation).')
         print('----------------------------------------------------------------------')
 
 

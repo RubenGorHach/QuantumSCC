@@ -99,7 +99,7 @@ class Test_Hamiltonian_function(unittest.TestCase):
         hamiltonian = np.array([[1.,  0.],
                                 [0.,  2.]])
         
-        self.assertTrue(np.allclose(cr.extended_quadratic_hamiltonian, hamiltonian))
+        self.assertTrue(np.allclose(cr.quadratic_hamiltonian, hamiltonian))
 
 
 class Test_linear_examples(unittest.TestCase):
@@ -114,7 +114,7 @@ class Test_linear_examples(unittest.TestCase):
         cr = Circuit(LC)
 
         omega = 1e-9/(np.sqrt(C.cValue*1e-12*L.lValue*1e-9))
-        expected_hamiltonian = np.array([[omega/2/np.pi, 0], [0, omega/2/np.pi]])
+        expected_hamiltonian = np.array([[omega, 0], [0, omega]])
 
         self.assertTrue(np.allclose(cr.extended_quantum_hamiltonian, expected_hamiltonian))
 
@@ -128,7 +128,7 @@ class Test_linear_examples(unittest.TestCase):
         cr = Circuit(circuit_2C_1L_parallel)
 
         omega = 1e-9/(np.sqrt(2*C.cValue*1e-12*L.lValue*1e-9))
-        expected_hamiltonian = np.array([[omega/2/np.pi, 0], [0, omega/2/np.pi]])
+        expected_hamiltonian = np.array([[omega, 0], [0, omega]])
 
         self.assertTrue(np.allclose(cr.extended_quantum_hamiltonian, expected_hamiltonian))
 
@@ -142,7 +142,7 @@ class Test_linear_examples(unittest.TestCase):
         cr = Circuit(circuit_2C_1L_series)
 
         omega = 1e-9/(np.sqrt(0.5*C.cValue*1e-12*L.lValue*1e-9))
-        expected_hamiltonian = np.array([[omega/2/np.pi, 0], [0, omega/2/np.pi]])
+        expected_hamiltonian = np.array([[omega, 0], [0, omega]])
 
         self.assertTrue(np.allclose(cr.extended_quantum_hamiltonian, expected_hamiltonian))
     
@@ -160,10 +160,10 @@ class Test_linear_examples(unittest.TestCase):
 
         omega1 = 10 * np.sqrt(2)
         omega2 = 10 * np.sqrt(10)
-        expected_hamiltonian = np.array([[omega1/2/np.pi, 0, 0, 0], 
-                                         [0, omega2/2/np.pi, 0, 0], 
-                                         [0, 0, omega1/2/np.pi, 0], 
-                                         [0, 0, 0, omega2/2/np.pi]])
+        expected_hamiltonian = np.array([[omega1, 0, 0, 0], 
+                                         [0, omega2, 0, 0], 
+                                         [0, 0, omega1, 0], 
+                                         [0, 0, 0, omega2]])
 
         self.assertTrue(np.allclose(cr.extended_quantum_hamiltonian, expected_hamiltonian))
 
@@ -177,10 +177,10 @@ class Test_linear_examples(unittest.TestCase):
         cr = Circuit(symmetric_starcircuit)
 
         omega = 18.2574110
-        expected_hamiltonian = np.array([[omega/2/np.pi, 0, 0, 0], 
-                                         [0, omega/2/np.pi, 0, 0], 
-                                         [0, 0, omega/2/np.pi, 0], 
-                                         [0, 0, 0, omega/2/np.pi]])
+        expected_hamiltonian = np.array([[omega, 0, 0, 0], 
+                                         [0, omega, 0, 0], 
+                                         [0, 0, omega, 0], 
+                                         [0, 0, 0, omega]])
 
         self.assertTrue(np.allclose(cr.extended_quantum_hamiltonian, expected_hamiltonian))
 

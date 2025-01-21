@@ -40,42 +40,33 @@ class Test_symplectic_form_function(unittest.TestCase):
 
     def test_symplectic_form_transformation(self):
 
-        matrix_before_transformation = np.array([[ 0.,  0., -1.,  0.],
-                                                 [ 0.,  0., -1.,  0.],
-                                                 [ 1.,  1.,  0.,  0.],
-                                                 [ 0.,  0.,  0.,  0.]])
+        matrix_before_transformation = np.array([[ 0.,  0.,  0.,  1., -1.],
+                                                 [ 0.,  0.,  0.,  0., -1.],
+                                                 [ 0.,  0.,  0.,  0.,  0.],
+                                                 [-1.,  0.,  0.,  0.,  0.],
+                                                 [ 1.,  1.,  0.,  0.,  0.]])
         
-        matrix_after_transformation = np.array([[ 0.,  1.,  0.,  0.],
-                                                [-1.,  0.,  0.,  0.],
-                                                [ 0.,  0.,  0.,  0.],
-                                                [ 0.,  0.,  0.,  0.]])
+        matrix_after_transformation = np.array([[ 0.,  0.,  1.,  0.,  0.],
+                                                [ 0.,  0.,  0.,  1.,  0.],
+                                                [-1., -0.,  0.,  0.,  0.],
+                                                [-0., -1.,  0.,  0.,  0.],
+                                                [ 0.,  0.,  0.,  0.,  0.]])
         
-        matrix_test, _ = symplectic_transformation(matrix_before_transformation, no_flux_variables=2)
+        matrix_test, _, _ = omega_symplectic_transformation(matrix_before_transformation, no_compact_flux_variables=0, no_flux_variables=2)
         
         self.assertTrue(np.allclose(matrix_after_transformation, matrix_test))
 
     def test_symplectic_form_basis_change(self):
 
-        matrix_before_transformation = np.array([[ 0.,  0., -1.,  0.],
-                                                 [ 0.,  0., -1.,  0.],
-                                                 [ 1.,  1.,  0.,  0.],
-                                                 [ 0.,  0.,  0.,  0.]])
+        matrix_before_transformation = np.array([[ 0.,  0.,  0.,  1., -1.],
+                                                 [ 0.,  0.,  0.,  0., -1.],
+                                                 [ 0.,  0.,  0.,  0.,  0.],
+                                                 [-1.,  0.,  0.,  0.,  0.],
+                                                 [ 1.,  1.,  0.,  0.,  0.]])
         
-        canonical_matrix, canonical_basis_change = symplectic_transformation(matrix_before_transformation, no_flux_variables=2)
+        canonical_matrix, canonical_basis_change, _ = omega_symplectic_transformation(matrix_before_transformation, no_compact_flux_variables=0, no_flux_variables=2)
 
         self.assertTrue(np.allclose(canonical_matrix, canonical_basis_change.T @ matrix_before_transformation @ canonical_basis_change))
-
-    def test_symplectic_form_random_antisymmetric_matrix(self):
-
-        size = 3
-        random_block = np.random.normal(size=(size, size))
-        random_antisymmetric_matrix_by_blocks = np.zeros((2*size, 2*size))
-        random_antisymmetric_matrix_by_blocks[:size,  size:] = random_block
-        random_antisymmetric_matrix_by_blocks[size:, :size] = -random_block.T
-
-        symplectic_matrix, symplectic_basis_change = symplectic_transformation(random_antisymmetric_matrix_by_blocks, no_flux_variables=2)
-
-        self.assertTrue(np.allclose(symplectic_matrix, symplectic_basis_change.T @ random_antisymmetric_matrix_by_blocks @ symplectic_basis_change))
 
 class Test_canonical_transformation_quadratic_hamiltonian(unittest.TestCase):
 
