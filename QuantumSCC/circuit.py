@@ -491,18 +491,18 @@ class Circuit:
         # Print the extended Hamiltonian
         for i in range(no_compact_fluxes, no_flux_variables):
             if np.abs(quantum_quadratic_hamiltonian[i,i]) > 1e-14:
-                print(f'+ {quantum_quadratic_hamiltonian[i,i]:.{precision}f} [(\u03C6_R{i-no_compact_fluxes+1})^2 + (Q_R{i-no_compact_fluxes+1})^2]', end=" ")
+                print(f'+ {quantum_quadratic_hamiltonian[i,i]:.{precision}f} [(\u03C6_e{i-no_compact_fluxes+1})^2 + (Q_e{i-no_compact_fluxes+1})^2]', end=" ")
         
         # Print interaction Hamiltonian
         for i in range(no_flux_variables, 2*no_flux_variables):
             for j in range(no_flux_variables, 2*no_flux_variables):
                 if np.abs(quantum_quadratic_hamiltonian[i,j]) > 1e-14 and i > j:
-                    print(f' + {(2 * quantum_quadratic_hamiltonian[i,j]):.{precision}f} Q_R{i-no_flux_variables-no_compact_fluxes+1} Q_S{j-no_flux_variables+1}', end=" ")
+                    print(f' + {(2 * quantum_quadratic_hamiltonian[i,j]):.{precision}f} Q_e{i-no_flux_variables-no_compact_fluxes+1} Q_c{j-no_flux_variables+1}', end=" ")
 
         # Print non-linear Hamiltonian
         for i in range(no_compact_fluxes):
             if np.abs(quantum_quadratic_hamiltonian[i+no_flux_variables, i+no_flux_variables]) > 1e-14:
-                print(f' + {quantum_quadratic_hamiltonian[i+no_flux_variables,i+no_flux_variables]:.{precision}f} (Q_S{i+1})^2', end=" ")
+                print(f' + {quantum_quadratic_hamiltonian[i+no_flux_variables,i+no_flux_variables]:.{precision}f} (Q_c{i+1})^2', end=" ")
 
         junction_energy = np.zeros(no_JJ)
         for i, elem in enumerate(self.elements):
@@ -512,9 +512,9 @@ class Circuit:
         
         for i in range(no_JJ):
             if i != no_JJ-1:
-                print(f' - {junction_energy[i]:.{precision}f} cos(v_{i} \u03BE)', end=" ")
+                print(f' - {junction_energy[i]:.{precision}f} cos(v_{i+1} \u03BE)', end=" ")
             else:
-                print(f' - {junction_energy[i]:.{precision}f} cos(v_{i} \u03BE)')
+                print(f' - {junction_energy[i]:.{precision}f} cos(v_{i+1} \u03BE)')
         if no_JJ == 0:
             print('')
 
@@ -526,22 +526,20 @@ class Circuit:
         print(f'Variable vectors \u03BEᵀ: (', end=" ")
         for i in range(2*no_flux_variables):
             if i < no_compact_fluxes:
-                print(f'\u03C6_S{i+1}', end=" ")
+                print(f'\u03C6_c{i+1}', end=" ")
             elif no_compact_fluxes <= i < no_flux_variables:
-                print(f' \u03C6_R{i-no_compact_fluxes+1}', end=" ")
+                print(f' \u03C6_e{i-no_compact_fluxes+1}', end=" ")
             elif no_flux_variables <= i < no_flux_variables + no_compact_fluxes:
-                print(f' Q_S{i-no_flux_variables+1}', end=" ")
-            elif  no_flux_variables + no_compact_fluxes <= i < 2*no_flux_variables-1:
-                print(f' Q_R{i-no_compact_fluxes-no_flux_variables+1}', end=" ")
-            elif i == 2*no_flux_variables-1:
-                print(f' Q_R{i-no_compact_fluxes-no_flux_variables+1}', end=" ")
+                print(f' Q_c{i-no_flux_variables+1}', end=" ")
+            elif  no_flux_variables + no_compact_fluxes <= i <= 2*no_flux_variables-1:
+                print(f' Q_e{i-no_compact_fluxes-no_flux_variables+1}', end=" ")
         print(f')')
         print(f'')
 
         # Return the opological behavior of each operator
         print(f'Subindex explanation:')
-        print(f' - Subindex R indicates that the operator belongs to the extended flux subspace')
-        print(f' - Subindex S indicates that the operator belongs to the compact flux subspace')
+        print(f' - Subindex e indicates that the operator belongs to the extended flux subspace')
+        print(f' - Subindex c indicates that the operator belongs to the compact flux subspace')
 
         # Give the dimension of the fluxes and charges
         print(f'IMPORTANT: Flux and Charge operators of this expression are dimensionless (number-phase representation).')
