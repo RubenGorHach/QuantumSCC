@@ -10,8 +10,8 @@ able to diagonalize nonlinear circuit Hamiltonians; introduce additional circuit
 and add the possible interaction between the circuit and an external electromagnetic field.
 
 ## Examples
-  - Linear circuit examples are available in: https://github.com/RubenGorHach/QuantumSCC/blob/main/examples_linear_circuits.ipynb
-  - Nonlinear circuit examples are available in: https://github.com/RubenGorHach/QuantumSCC/blob/main/examples_nonlinear_circuits.ipynb
+  - Linear circuit examples are available in: [examples_linear_circuits.ipynb](examples_linear_circuits.ipynb)
+  - Nonlinear circuit examples are available in: [examples_nonlinear_circuits.ipynb](examples_nonlinear_circuits.ipynb)
 
 ## References
 [1] A. Parra-Rodriguez and I. L. Egusquiza, Geometrical description and faddeev-jackiw quantization of electrical networks, Quantum 8, 1466 (2024).
