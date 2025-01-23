@@ -542,9 +542,9 @@ class Circuit:
         print(f'')
 
         # Return the opological behavior of each operator
-        print(f'Subindex explanation:')
-        print(f' - Subindex e indicates that the operator belongs to the extended flux subspace')
-        print(f' - Subindex c indicates that the operator belongs to the compact flux subspace')
+        print(f'Operator subscripts explanation:')
+        print(f' - Subindex e indicates that the operator belongs to the extended flux subspace and their conjugated charges')
+        print(f' - Subindex c indicates that the operator belongs to the compact flux subspace and their conjugated charges')
         print('')
 
         # Give the dimension of the fluxes and charges
