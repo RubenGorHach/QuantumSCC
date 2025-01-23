@@ -522,8 +522,13 @@ class Circuit:
 
         np.set_printoptions(precision=precision)
         print(f'Vectors v:')
-        print(f'{(vector_JJ.real).T}')
-        print(f'Variable vectors \u03BEᵀ: (', end=" ")
+        for i in range(vector_JJ.shape[1]):
+            print(f'v_{i+1} = {(vector_JJ[:,i].real).T}')
+
+        print('')
+
+        print(f'Variable vectors \u03BE:')
+        print(f'\u03BEᵀ = (', end=" ")
         for i in range(2*no_flux_variables):
             if i < no_compact_fluxes:
                 print(f'\u03C6_c{i+1}', end=" ")
@@ -540,6 +545,7 @@ class Circuit:
         print(f'Subindex explanation:')
         print(f' - Subindex e indicates that the operator belongs to the extended flux subspace')
         print(f' - Subindex c indicates that the operator belongs to the compact flux subspace')
+        print('')
 
         # Give the dimension of the fluxes and charges
         print(f'IMPORTANT: Flux and Charge operators of this expression are dimensionless (number-phase representation).')
