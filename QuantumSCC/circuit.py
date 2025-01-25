@@ -491,18 +491,18 @@ class Circuit:
         # Print the extended Hamiltonian
         for i in range(no_compact_fluxes, no_flux_variables):
             if np.abs(quantum_quadratic_hamiltonian[i,i]) > 1e-14:
-                print(f'+ {quantum_quadratic_hamiltonian[i,i]:.{precision}f} [(\u03C6_e{i-no_compact_fluxes+1})^2 + (Q_e{i-no_compact_fluxes+1})^2]', end=" ")
+                print(f'+ {quantum_quadratic_hamiltonian[i,i]:.{precision}f} [(\u03D5_e{i-no_compact_fluxes+1})^2 + (n_e{i-no_compact_fluxes+1})^2]', end=" ")
         
         # Print interaction Hamiltonian
         for i in range(no_flux_variables, 2*no_flux_variables):
             for j in range(no_flux_variables, 2*no_flux_variables):
                 if np.abs(quantum_quadratic_hamiltonian[i,j]) > 1e-14 and i > j:
-                    print(f' + {(2 * quantum_quadratic_hamiltonian[i,j]):.{precision}f} Q_e{i-no_flux_variables-no_compact_fluxes+1} Q_c{j-no_flux_variables+1}', end=" ")
+                    print(f' + {(2 * quantum_quadratic_hamiltonian[i,j]):.{precision}f} n_e{i-no_flux_variables-no_compact_fluxes+1} n_c{j-no_flux_variables+1}', end=" ")
 
         # Print non-linear Hamiltonian
         for i in range(no_compact_fluxes):
             if np.abs(quantum_quadratic_hamiltonian[i+no_flux_variables, i+no_flux_variables]) > 1e-14:
-                print(f' + {quantum_quadratic_hamiltonian[i+no_flux_variables,i+no_flux_variables]:.{precision}f} (Q_c{i+1})^2', end=" ")
+                print(f' + {quantum_quadratic_hamiltonian[i+no_flux_variables,i+no_flux_variables]:.{precision}f} (n_c{i+1})^2', end=" ")
 
         junction_energy = np.zeros(no_JJ)
         for i, elem in enumerate(self.elements):
@@ -531,13 +531,13 @@ class Circuit:
         print(f'\u03BEᵀ = (', end=" ")
         for i in range(2*no_flux_variables):
             if i < no_compact_fluxes:
-                print(f'\u03C6_c{i+1}', end=" ")
+                print(f'\u03D5_c{i+1}', end=" ")
             elif no_compact_fluxes <= i < no_flux_variables:
-                print(f' \u03C6_e{i-no_compact_fluxes+1}', end=" ")
+                print(f' \u03D5_e{i-no_compact_fluxes+1}', end=" ")
             elif no_flux_variables <= i < no_flux_variables + no_compact_fluxes:
-                print(f' Q_c{i-no_flux_variables+1}', end=" ")
+                print(f' n_c{i-no_flux_variables+1}', end=" ")
             elif  no_flux_variables + no_compact_fluxes <= i <= 2*no_flux_variables-1:
-                print(f' Q_e{i-no_compact_fluxes-no_flux_variables+1}', end=" ")
+                print(f' n_e{i-no_compact_fluxes-no_flux_variables+1}', end=" ")
         print(f')')
         print(f'')
 
@@ -547,8 +547,10 @@ class Circuit:
         print(f' - Subindex c indicates that the operator belongs to the compact flux subspace and their conjugated charges')
         print('')
 
-        # Give the dimension of the fluxes and charges
-        print(f'IMPORTANT: Flux and Charge operators of this expression are dimensionless (number-phase representation).')
+        # Give the information about number-phase operators
+        print(f'Relation between number-phase operators and flux-charge operators:')
+        print(f' - n = Q/(2e)')
+        print(f' - \u03D5 = 2\u03C0 \u03C6/(\u03C6_0)')
         print('----------------------------------------------------------------------')
 
 
